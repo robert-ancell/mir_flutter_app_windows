@@ -182,7 +182,7 @@ class _MainPageState extends State<MainWindow> {
                                   final int index = entry.key;
                                   final ViewData viewData = entry.value;
                                   final int viewId = viewData.view.viewId;
-                                  final Archetype archetype =
+                                  final FlutterViewArchetype archetype =
                                       viewData.archetype!;
                                   final bool isSelected =
                                       selectedRowIndex == index;

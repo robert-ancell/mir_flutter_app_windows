@@ -11,7 +11,6 @@
             "program": "${workspaceFolder}/build/windows/x64/runner/Debug/mir_flutter_app_windows.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
             "environment": [],
             "console":"internalConsole"
         },

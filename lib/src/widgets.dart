@@ -74,8 +74,8 @@ class _MultiViewAppState extends State<MultiViewApp>
       case 'onWindowCreated':
         final int viewId = call.arguments['viewId'];
         final int? parentViewId = call.arguments['parentViewId'];
-        final Archetype archetype =
-            Archetype.values[call.arguments['archetype']];
+        final FlutterViewArchetype archetype =
+            FlutterViewArchetype.values[call.arguments['archetype']];
         log('onWindowCreated - [id: $viewId] - [$archetype] - [parent: $parentViewId]');
 
         ViewData? viewData = _views[viewId];

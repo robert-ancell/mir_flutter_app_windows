@@ -28,9 +28,9 @@ class App extends StatelessWidget {
       );
     } else {
       switch (viewData.archetype) {
-        case Archetype.popup:
+        case FlutterViewArchetype.popup:
           return const PopupWindow();
-        case Archetype.regular:
+        case FlutterViewArchetype.regular:
           return const RegularWindow();
         default:
           return const RegularWindow();

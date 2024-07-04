@@ -1,8 +1,8 @@
-import 'dart:ui';
+import 'dart:ui' show FlutterView;
 
 import 'package:flutter/widgets.dart';
 
-enum Archetype {
+enum FlutterViewArchetype {
   regular,
   floatingRegular,
   dialog,
@@ -14,7 +14,7 @@ enum Archetype {
 class ViewData {
   final FlutterView view;
   final Widget widget;
-  Archetype? archetype;
+  FlutterViewArchetype? archetype;
   FlutterView? parentView;
 
   ViewData(this.view, this.widget, [this.archetype, this.parentView]);
