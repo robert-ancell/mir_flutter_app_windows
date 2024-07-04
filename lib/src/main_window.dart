@@ -108,7 +108,7 @@ class _MainPageState extends State<MainWindow> {
   ];
 
   int selectedRowIndex = -1;
-  int window = 0;
+  // int window = 0;
 
   @override
   void initState() {
@@ -117,8 +117,8 @@ class _MainPageState extends State<MainWindow> {
 
   @override
   Widget build(BuildContext context) {
-    final views = ViewsInheritedWidget.of(context)!.views;
-    final ViewData viewData = views[View.of(context).viewId]!;
+    final viewDataMap = ViewsInheritedWidget.of(context)!.views;
+    // final viewData = viewDataMap[View.of(context).viewId]!;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mir Window Test')),
@@ -138,7 +138,7 @@ class _MainPageState extends State<MainWindow> {
                         children: [
                           SizedBox(
                             width: 400,
-                            height: 400,
+                            height: 500,
                             child: SingleChildScrollView(
                               scrollDirection: Axis.vertical,
                               child: DataTable(
@@ -178,14 +178,18 @@ class _MainPageState extends State<MainWindow> {
                                       ),
                                       numeric: true),
                                 ],
-                                rows: views.entries.map<DataRow>((entry) {
-                                  final int index = entry.key;
-                                  final ViewData viewData = entry.value;
-                                  final int viewId = viewData.view.viewId;
-                                  final FlutterViewArchetype archetype =
-                                      viewData.archetype!;
-                                  final bool isSelected =
-                                      selectedRowIndex == index;
+                                rows: viewDataMap.entries
+                                    .toList()
+                                    .asMap()
+                                    .entries
+                                    .map<DataRow>((indexedEntry) {
+                                  final index = indexedEntry.key;
+                                  final MapEntry<int, ViewData> entry =
+                                      indexedEntry.value;
+                                  final viewData = entry.value;
+                                  final viewId = viewData.view.viewId;
+                                  final archetype = viewData.archetype!;
+                                  final isSelected = selectedRowIndex == index;
 
                                   return DataRow(
                                     color:
@@ -213,9 +217,8 @@ class _MainPageState extends State<MainWindow> {
                                         Text('$viewId'),
                                       ),
                                       DataCell(
-                                        Text(archetype
-                                            .toString()
-                                            .replaceFirst('Archetype.', '')),
+                                        Text(archetype.toString().replaceFirst(
+                                            'FlutterViewArchetype.', '')),
                                       ),
                                       DataCell(
                                         IconButton(
@@ -323,7 +326,7 @@ class _MainPageState extends State<MainWindow> {
                                       //                 ['id'],
                                       //             windowSettings[
                                       //                 'satelliteSize'],
-                                      //             anchorRectClampedToSize(
+                                      //             clampAnchorRectToSize(
                                       //                 await getWindowSize(windows[
                                       //                         selectedRowIndex]
                                       //                     ['id'])),
@@ -368,16 +371,46 @@ class _MainPageState extends State<MainWindow> {
                                       // ),
                                       // const SizedBox(height: 8),
                                       OutlinedButton(
-                                        onPressed: () async {
-                                          await createPopupWindow(viewData.view,
-                                              windowSettings['popupSize']);
-                                          if (mounted) {
-                                            setState(() {
-                                              selectedRowIndex = -1;
-                                            });
-                                          }
-                                        },
-                                        child: const Text('Popup'),
+                                        onPressed: selectedRowIndex >= 0
+                                            ? () async {
+                                                final selectedData = viewDataMap
+                                                    .entries
+                                                    .toList()[selectedRowIndex]
+                                                    .value;
+                                                await createPopupWindow(
+                                                  selectedData.view,
+                                                  windowSettings['popupSize'],
+                                                  clampAnchorRectToSize(
+                                                      selectedData.size),
+                                                  FlutterViewPositioner(
+                                                    parentAnchor:
+                                                        positionerSettings[
+                                                                positionerIndex]
+                                                            ['parentAnchor'],
+                                                    childAnchor:
+                                                        positionerSettings[
+                                                                positionerIndex]
+                                                            ['childAnchor'],
+                                                    offset: positionerSettings[
+                                                            positionerIndex]
+                                                        ['offset'],
+                                                    constraintAdjustment:
+                                                        positionerSettings[
+                                                                positionerIndex]
+                                                            [
+                                                            'constraintAdjustments'],
+                                                  ),
+                                                );
+                                                if (mounted) {
+                                                  setState(() {
+                                                    selectedRowIndex = -1;
+                                                  });
+                                                }
+                                              }
+                                            : null,
+                                        child: Text(selectedRowIndex >= 0
+                                            ? 'Popup of ID ${viewDataMap.entries.toList()[selectedRowIndex].key}'
+                                            : 'Popup'),
                                       ),
                                       // const SizedBox(height: 8),
                                       // OutlinedButton(
@@ -388,7 +421,7 @@ class _MainPageState extends State<MainWindow> {
                                       //             windows[selectedRowIndex]
                                       //                 ['id'],
                                       //             windowSettings['tipSize'],
-                                      //             anchorRectClampedToSize(
+                                      //             clampAnchorRectToSize(
                                       //                 await getWindowSize(windows[
                                       //                         selectedRowIndex]
                                       //                     ['id'])),
@@ -560,11 +593,11 @@ class _MainPageState extends State<MainWindow> {
     channel.invokeMethod('destroyWindow', [windowId]);
   }
 
-  Rect anchorRectClampedToSize(Size size) {
-    double left = windowSettings['anchorRect'].left.clamp(0, size.width);
-    double top = windowSettings['anchorRect'].top.clamp(0, size.height);
-    double right = windowSettings['anchorRect'].right.clamp(0, size.width);
-    double bottom = windowSettings['anchorRect'].bottom.clamp(0, size.height);
+  Rect clampAnchorRectToSize(Size? size) {
+    double left = windowSettings['anchorRect'].left.clamp(0, size?.width);
+    double top = windowSettings['anchorRect'].top.clamp(0, size?.height);
+    double right = windowSettings['anchorRect'].right.clamp(0, size?.width);
+    double bottom = windowSettings['anchorRect'].bottom.clamp(0, size?.height);
     return Rect.fromLTRB(left, top, right, bottom);
   }
 }

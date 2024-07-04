@@ -16,6 +16,8 @@ class ViewData {
   final Widget widget;
   FlutterViewArchetype? archetype;
   FlutterView? parentView;
+  Size? size;
 
-  ViewData(this.view, this.widget, [this.archetype, this.parentView]);
+  ViewData(this.view, this.widget,
+      [this.archetype, this.parentView, this.size]);
 }

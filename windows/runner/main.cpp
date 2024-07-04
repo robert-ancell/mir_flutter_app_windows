@@ -26,11 +26,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   RegisterPlugins(engine.get());
 
   if (!FlutterWindowManager::createRegularWindow(engine, L"Main window",
-                                                 {10, 10}, {640, 640}) ||
+                                                 {10, 10}, {700, 650}) ||
       !FlutterWindowManager::createRegularWindow(engine, L"window #1",
-                                                 {650, 10}, {400, 300}) ||
+                                                 {710, 10}, {400, 320}) ||
       !FlutterWindowManager::createRegularWindow(engine, L"window #2",
-                                                 {650, 320}, {400, 300})) {
+                                                 {710, 340}, {400, 320})) {
     return EXIT_FAILURE;
   }
 

@@ -93,6 +93,20 @@ class _MultiViewAppState extends State<MultiViewApp>
         final int viewId = call.arguments['viewId'];
         log('onWindowDestroyed - [id: $viewId] - [${_views[viewId]?.archetype}] - [parent: ${_views[viewId]?.parentView}]');
         break;
+      case 'onWindowResized':
+        final int viewId = call.arguments['viewId'];
+        final int width = call.arguments['width'];
+        final int height = call.arguments['height'];
+        final Size size = Size(width.toDouble(), height.toDouble());
+        log('onWindowResized - [id: $viewId] - [size: (${size.width}, ${size.height})]');
+
+        ViewData? viewData = _views[viewId];
+        if (viewData != null) {
+          viewData.size = size;
+          if (_allViewsHaveArchetype()) {
+            setState(() {});
+          }
+        }
     }
   }
 

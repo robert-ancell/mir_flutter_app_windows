@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import 'view_data.dart';
 import 'inherited_views.dart';
 import 'api/windowing_api.dart';
+import 'api/flutter_view_positioner.dart';
 
 class PopupWindow extends StatelessWidget {
   const PopupWindow({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final views = ViewsInheritedWidget.of(context)!.views;
-    final ViewData viewData = views[View.of(context).viewId]!;
+    final viewDataMap = ViewsInheritedWidget.of(context)!.views;
+    final viewData = viewDataMap[View.of(context).viewId]!;
 
     return Container(
       decoration: BoxDecoration(
@@ -45,7 +45,20 @@ class PopupWindow extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () async {
                     await createPopupWindow(
-                        viewData.view, const Size(200, 200));
+                      viewData.view,
+                      const Size(200, 200),
+                      Rect.fromLTWH(
+                          0, 0, viewData.size!.width, viewData.size!.height),
+                      const FlutterViewPositioner(
+                        parentAnchor: FlutterViewPositionerAnchor.center,
+                        childAnchor: FlutterViewPositionerAnchor.center,
+                        offset: Offset(0, 0),
+                        constraintAdjustment: <FlutterViewPositionerConstraintAdjustment>{
+                          FlutterViewPositionerConstraintAdjustment.slideX,
+                          FlutterViewPositionerConstraintAdjustment.slideY,
+                        },
+                      ),
+                    );
                   },
                   child: const Text('Another popup'),
                 ),
@@ -64,3 +77,17 @@ class PopupWindow extends StatelessWidget {
     );
   }
 }
+
+
+/*
+    <String, dynamic>{
+      'name': 'Center',
+      'parentAnchor': FlutterViewPositionerAnchor.center,
+      'childAnchor': FlutterViewPositionerAnchor.center,
+      'offset': const Offset(0, 0),
+      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
+        FlutterViewPositionerConstraintAdjustment.slideX,
+        FlutterViewPositionerConstraintAdjustment.slideY,
+      }
+    },
+*/

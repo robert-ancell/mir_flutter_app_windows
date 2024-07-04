@@ -4,6 +4,8 @@
 
 #include "flutter_window.h"
 
+#include <flutter/encodable_value.h>
+
 #include <windows.h>
 
 #include "flutter_window_manager.h"
@@ -55,8 +57,7 @@ void FlutterWindow::OnDestroy() {
 
 LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
-                              WPARAM const wparam,
-                              LPARAM const lparam) noexcept {
+                              WPARAM const wparam, LPARAM const lparam) {
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -67,8 +68,17 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     }
   }
 
-  if (message == WM_FONTCHANGE) {
+  switch (message) {
+  case WM_FONTCHANGE:
     engine_->ReloadSystemFonts();
+    break;
+  case WM_SIZE:
+    if (flutter_controller_) {
+      FlutterWindowManager::sendOnWindowResized(flutter_controller_->view_id());
+    }
+    break;
+  default:
+    break;
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);

@@ -23,7 +23,7 @@ protected:
   bool OnCreate() override;
   void OnDestroy() override;
   LRESULT MessageHandler(HWND hwnd, UINT const message, WPARAM const wparam,
-                         LPARAM const lparam) noexcept override;
+                         LPARAM const lparam) override;
 
 private:
   // The engine this window is attached to.

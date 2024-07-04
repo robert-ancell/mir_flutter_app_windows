@@ -3,8 +3,9 @@
 #include <dwmapi.h>
 #include <flutter_windows.h>
 
-#include "debug.h"
 #include "flutter_window_manager.h"
+
+#include "debug.h"
 #include "resource.h"
 
 namespace {
@@ -186,7 +187,8 @@ Win32Window::~Win32Window() {
 }
 
 bool Win32Window::Create(const std::wstring &title, const Point &origin,
-                         const Size &size, Archetype archetype, HWND parent) {
+                         const Size &size, mir::Archetype archetype,
+                         HWND parent) {
   Destroy();
 
   archetype_ = archetype;
@@ -203,15 +205,18 @@ bool Win32Window::Create(const std::wstring &title, const Point &origin,
   // TODO(loicsharma): Hide the window until the first frame is rendered.
   HWND window = nullptr;
   switch (archetype) {
-  case Archetype::regular:
+  case mir::Archetype::regular:
     window = CreateWindow(
         window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
         Scale(size.width, scale_factor), Scale(size.height, scale_factor),
         parent, nullptr, GetModuleHandle(nullptr), this);
     break;
-  case Archetype::popup:
+  case mir::Archetype::popup:
     if (auto *const parent_window{GetThisFromHandle(parent)}) {
+      if (parent_window->child_content_ != nullptr) {
+        SetFocus(parent_window->child_content_);
+      }
       parent_window->child_popups_.insert(this);
     }
     window = CreateWindow(
@@ -290,7 +295,7 @@ Win32Window::MessageHandler(HWND hwnd, UINT message, WPARAM wparam,
 
   case WM_ACTIVATE:
     if (wparam != WA_INACTIVE) {
-      if (archetype_ != Archetype::popup) {
+      if (archetype_ != mir::Archetype::popup) {
         // If this window is not a popup and is being activated, close the
         // popups anchored to other windows
         for (auto const &[_, window] : FlutterWindowManager::windows()) {
@@ -307,7 +312,7 @@ Win32Window::MessageHandler(HWND hwnd, UINT message, WPARAM wparam,
     return 0;
 
   case WM_NCACTIVATE:
-    if (wparam == FALSE && archetype_ != Archetype::popup &&
+    if (wparam == FALSE && archetype_ != mir::Archetype::popup &&
         !child_popups_.empty()) {
       // If an inactive title bar is to be drawn, and this is a top-level window
       // with popups, force the title bar to be drawn in its active colors
@@ -398,7 +403,7 @@ bool Win32Window::OnCreate() {
 }
 
 void Win32Window::OnDestroy() {
-  if (archetype_ == Archetype::popup) {
+  if (archetype_ == mir::Archetype::popup) {
     if (auto *const parent_window{GetParent(window_handle_)}) {
       GetThisFromHandle(parent_window)->child_popups_.erase(this);
     }

@@ -3,6 +3,8 @@
 
 #include <windows.h>
 
+#include "mir_windowing_types.h"
+
 #include <set>
 #include <string>
 
@@ -24,15 +26,6 @@ public:
         : width(width), height(height) {}
   };
 
-  enum class Archetype {
-    regular,
-    floating_regular,
-    dialog,
-    satellite,
-    popup,
-    tip
-  };
-
   Win32Window();
   virtual ~Win32Window();
 
@@ -42,8 +35,8 @@ public:
   // consistent size this function will scale the inputted width and height as
   // as appropriate for the default monitor. The window is invisible until
   // |Show| is called. Returns true if the window was created successfully.
-  bool Create(std::wstring const &title, Point const &origin, Size const &size,
-              Archetype archetype, HWND parent);
+  bool Create(const std::wstring &title, const Point &origin, const Size &size,
+              mir::Archetype archetype, HWND parent);
 
   // Show the current window. Returns true if the window was successfully shown.
   bool Show();
@@ -79,7 +72,7 @@ protected:
   // Called when Destroy is called.
   virtual void OnDestroy();
 
-  Archetype archetype_{Archetype::regular};
+  mir::Archetype archetype_{mir::Archetype::regular};
   std::set<Win32Window *> child_popups_;
 
 private:
