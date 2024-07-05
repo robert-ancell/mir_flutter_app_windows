@@ -3,6 +3,8 @@
 #include <flutter/encodable_value.h>
 #include <flutter/standard_method_codec.h>
 
+#include <dwmapi.h>
+
 namespace {
 auto *const CHANNEL{"io.mir-server/window"};
 auto const base_dpi{96.0};
@@ -22,6 +24,285 @@ auto calculateCenteredOrigin(Win32Window::Size size,
             static_cast<unsigned int>(centered_y / dpr)};
   }
   return {0, 0};
+}
+
+std::tuple<Win32Window::Point, Win32Window::Size>
+applyPositioner(mir::Positioner const &positioner,
+                Win32Window::Size const &size,
+                flutter::FlutterViewId parent_view_id) {
+  auto const &windows{FlutterWindowManager::windows()};
+  auto const &parent_window{windows.at(parent_view_id)};
+  auto const &parent_hwnd{parent_window->GetHandle()};
+  auto const dpr{FlutterDesktopGetDpiForHWND(parent_hwnd) / base_dpi};
+  auto const monitor_rect{[](HWND hwnd) -> RECT {
+    auto *monitor{MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST)};
+    MONITORINFO mi;
+    mi.cbSize = sizeof(MONITORINFO);
+    return GetMonitorInfo(monitor, &mi) ? mi.rcMonitor : RECT{0, 0, 0, 0};
+  }(parent_hwnd)};
+
+  RECT frame;
+  if (FAILED(DwmGetWindowAttribute(parent_hwnd, DWMWA_EXTENDED_FRAME_BOUNDS,
+                                   &frame, sizeof(frame)))) {
+    GetWindowRect(parent_hwnd, &frame);
+  }
+
+  struct RectF {
+    double left;
+    double top;
+    double right;
+    double bottom;
+  };
+
+  struct PointF {
+    double x;
+    double y;
+  };
+  RectF const cropped_frame{
+      .left = frame.left + positioner.anchor_rect.x * dpr,
+      .top = frame.top + positioner.anchor_rect.y * dpr,
+      .right = frame.left +
+               (positioner.anchor_rect.x + positioner.anchor_rect.width) * dpr,
+      .bottom =
+          frame.top +
+          (positioner.anchor_rect.y + positioner.anchor_rect.height) * dpr};
+  PointF const center{.x = (cropped_frame.left + cropped_frame.right) / 2.0,
+                      .y = (cropped_frame.top + cropped_frame.bottom) / 2.0};
+  PointF child_size{size.width * dpr, size.height * dpr};
+  PointF const child_center{child_size.x / 2.0, child_size.y / 2.0};
+
+  auto const get_parent_anchor_point{
+      [&](mir::Positioner::Anchor anchor) -> PointF {
+        switch (anchor) {
+        case mir::Positioner::Anchor::top:
+          return {center.x, cropped_frame.top};
+        case mir::Positioner::Anchor::bottom:
+          return {center.x, cropped_frame.bottom};
+        case mir::Positioner::Anchor::left:
+          return {cropped_frame.left, center.y};
+        case mir::Positioner::Anchor::right:
+          return {cropped_frame.right, center.y};
+        case mir::Positioner::Anchor::top_left:
+          return {cropped_frame.left, cropped_frame.top};
+        case mir::Positioner::Anchor::bottom_left:
+          return {cropped_frame.left, cropped_frame.bottom};
+        case mir::Positioner::Anchor::top_right:
+          return {cropped_frame.right, cropped_frame.top};
+        case mir::Positioner::Anchor::bottom_right:
+          return {cropped_frame.right, cropped_frame.bottom};
+        default:
+          return center;
+        }
+      }};
+
+  auto const get_child_anchor_point{
+      [&](mir::Positioner::Gravity gravity) -> PointF {
+        switch (gravity) {
+        case mir::Positioner::Gravity::top:
+          return {-child_center.x, -child_size.x};
+        case mir::Positioner::Gravity::bottom:
+          return {-child_center.x, 0};
+        case mir::Positioner::Gravity::left:
+          return {-child_size.x, -child_center.y};
+        case mir::Positioner::Gravity::right:
+          return {0, -child_center.y};
+        case mir::Positioner::Gravity::top_left:
+          return {-child_size.x, -child_size.y};
+        case mir::Positioner::Gravity::bottom_left:
+          return {-child_size.x, 0};
+        case mir::Positioner::Gravity::top_right:
+          return {0, -child_size.y};
+        case mir::Positioner::Gravity::bottom_right:
+          return {0, 0};
+        default:
+          return {-child_center.x, -child_center.y};
+        }
+      }};
+
+  auto const calculate_origin{[](PointF const &parent_anchor,
+                                 PointF const &child_anchor,
+                                 PointF const &offset) -> PointF {
+    return {.x = parent_anchor.x + child_anchor.x + offset.x,
+            .y = parent_anchor.y + child_anchor.y + offset.y};
+  }};
+
+  auto anchor{positioner.anchor};
+  auto gravity{positioner.gravity};
+  PointF offset{static_cast<double>(positioner.offset.dx),
+                static_cast<double>(positioner.offset.dy)};
+
+  auto parent_anchor_point{get_parent_anchor_point(anchor)};
+  auto child_anchor_point{get_child_anchor_point(gravity)};
+  PointF origin_dc{
+      calculate_origin(parent_anchor_point, child_anchor_point, offset)};
+
+  // Constraint adjustments
+  if (origin_dc.x < 0 || origin_dc.x + child_size.x > monitor_rect.right) {
+    auto const reverse_anchor_along_x{[](mir::Positioner::Anchor anchor) {
+      switch (anchor) {
+      case mir::Positioner::Anchor::left:
+        return mir::Positioner::Anchor::right;
+      case mir::Positioner::Anchor::right:
+        return mir::Positioner::Anchor::left;
+      case mir::Positioner::Anchor::top_left:
+        return mir::Positioner::Anchor::top_right;
+      case mir::Positioner::Anchor::bottom_left:
+        return mir::Positioner::Anchor::bottom_right;
+      case mir::Positioner::Anchor::top_right:
+        return mir::Positioner::Anchor::top_left;
+      case mir::Positioner::Anchor::bottom_right:
+        return mir::Positioner::Anchor::bottom_left;
+      default:
+        return anchor;
+      }
+    }};
+
+    auto const reverse_gravity_along_x{[](mir::Positioner::Gravity gravity) {
+      switch (gravity) {
+      case mir::Positioner::Gravity::left:
+        return mir::Positioner::Gravity::right;
+      case mir::Positioner::Gravity::right:
+        return mir::Positioner::Gravity::left;
+      case mir::Positioner::Gravity::top_left:
+        return mir::Positioner::Gravity::top_right;
+      case mir::Positioner::Gravity::bottom_left:
+        return mir::Positioner::Gravity::bottom_right;
+      case mir::Positioner::Gravity::top_right:
+        return mir::Positioner::Gravity::top_left;
+      case mir::Positioner::Gravity::bottom_right:
+        return mir::Positioner::Gravity::bottom_left;
+      default:
+        return gravity;
+      }
+    }};
+
+    if (positioner.constraint_adjustment &
+        static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_x)) {
+      anchor = reverse_anchor_along_x(anchor);
+      gravity = reverse_gravity_along_x(gravity);
+      offset = {-offset.x, offset.y};
+      parent_anchor_point = get_parent_anchor_point(anchor);
+      child_anchor_point = get_child_anchor_point(gravity);
+      origin_dc =
+          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+    } else if (positioner.constraint_adjustment &
+               static_cast<uint32_t>(
+                   mir::Positioner::ConstraintAdjustment::slide_x)) {
+      if (origin_dc.x < 0) {
+        auto const diff{abs(origin_dc.x)};
+        offset = {offset.x + diff, offset.y};
+      } else {
+        auto const diff{(origin_dc.x + child_size.x) - monitor_rect.right};
+        offset = {offset.x - diff, offset.y};
+      }
+      origin_dc =
+          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+    } else if (positioner.constraint_adjustment &
+               static_cast<uint32_t>(
+                   mir::Positioner::ConstraintAdjustment::resize_x)) {
+      if (origin_dc.x < 0) {
+        auto const diff{abs(origin_dc.x)};
+        origin_dc.x += diff;
+        child_size.x -= diff;
+        if (child_size.x < 1) {
+          child_size.x = 1;
+        }
+      } else {
+        auto const diff{(origin_dc.x + child_size.x) - monitor_rect.right};
+        child_size.x -= diff;
+        if (child_size.x < 1) {
+          child_size.x = 1;
+        }
+      }
+    }
+  }
+  if (origin_dc.y < 0 || origin_dc.y + child_size.y > monitor_rect.bottom) {
+    auto const reverse_anchor_along_y{[](mir::Positioner::Anchor anchor) {
+      switch (anchor) {
+      case mir::Positioner::Anchor::top:
+        return mir::Positioner::Anchor::bottom;
+      case mir::Positioner::Anchor::bottom:
+        return mir::Positioner::Anchor::top;
+      case mir::Positioner::Anchor::top_left:
+        return mir::Positioner::Anchor::bottom_left;
+      case mir::Positioner::Anchor::bottom_left:
+        return mir::Positioner::Anchor::top_left;
+      case mir::Positioner::Anchor::top_right:
+        return mir::Positioner::Anchor::bottom_right;
+      case mir::Positioner::Anchor::bottom_right:
+        return mir::Positioner::Anchor::top_right;
+      default:
+        return anchor;
+      }
+    }};
+
+    auto const reverse_gravity_along_y{[](mir::Positioner::Gravity gravity) {
+      switch (gravity) {
+      case mir::Positioner::Gravity::top:
+        return mir::Positioner::Gravity::bottom;
+      case mir::Positioner::Gravity::bottom:
+        return mir::Positioner::Gravity::top;
+      case mir::Positioner::Gravity::top_left:
+        return mir::Positioner::Gravity::bottom_left;
+      case mir::Positioner::Gravity::bottom_left:
+        return mir::Positioner::Gravity::top_left;
+      case mir::Positioner::Gravity::top_right:
+        return mir::Positioner::Gravity::bottom_right;
+      case mir::Positioner::Gravity::bottom_right:
+        return mir::Positioner::Gravity::top_right;
+      default:
+        return gravity;
+      }
+    }};
+
+    if (positioner.constraint_adjustment &
+        static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_y)) {
+      anchor = reverse_anchor_along_y(anchor);
+      gravity = reverse_gravity_along_y(gravity);
+      offset = {offset.x, -offset.y};
+      parent_anchor_point = get_parent_anchor_point(anchor);
+      child_anchor_point = get_child_anchor_point(gravity);
+      origin_dc =
+          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+    } else if (positioner.constraint_adjustment &
+               static_cast<uint32_t>(
+                   mir::Positioner::ConstraintAdjustment::slide_y)) {
+      if (origin_dc.y < 0) {
+        auto const diff{abs(origin_dc.y)};
+        offset = {offset.x, offset.y + diff};
+      } else {
+        auto const diff{(origin_dc.y + child_size.y) - monitor_rect.bottom};
+        offset = {offset.x, offset.y - diff};
+      }
+      origin_dc =
+          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+    } else if (positioner.constraint_adjustment &
+               static_cast<uint32_t>(
+                   mir::Positioner::ConstraintAdjustment::resize_y)) {
+      if (origin_dc.y < 0) {
+        auto const diff{abs(origin_dc.y)};
+        origin_dc.y += diff;
+        child_size.y -= diff;
+        if (child_size.y < 1) {
+          child_size.y = 1;
+        }
+      } else {
+        auto const diff{(origin_dc.y + child_size.y) - monitor_rect.bottom};
+        child_size.y -= diff;
+        if (child_size.y < 1) {
+          child_size.y = 1;
+        }
+      }
+    }
+  }
+
+  Win32Window::Point const origin_lc{
+      static_cast<unsigned int>(origin_dc.x / dpr),
+      static_cast<unsigned int>(origin_dc.y / dpr)};
+  Win32Window::Size const new_size{
+      static_cast<unsigned int>(child_size.x / dpr),
+      static_cast<unsigned int>(child_size.y / dpr)};
+  return {origin_lc, new_size};
 }
 
 void handleCreateRegularWindow(
@@ -91,6 +372,7 @@ void handleCreatePopupWindow(
         positioner_child_anchor_it != map->end() &&
         positioner_offset_it != map->end() &&
         positioner_constraint_adjustment_it != map->end()) {
+      // parent
       auto const *const parent{std::get_if<int>(&parent_it->second)};
       if (!parent) {
         result->Error("INVALID_VALUE",
@@ -98,6 +380,7 @@ void handleCreatePopupWindow(
         return;
       }
 
+      // size
       auto const *const size_list{
           std::get_if<std::vector<flutter::EncodableValue>>(&size_it->second)};
       if (size_list->size() != 2 ||
@@ -112,6 +395,7 @@ void handleCreatePopupWindow(
       Win32Window::Size const size{static_cast<unsigned int>(width),
                                    static_cast<unsigned int>(height)};
 
+      // anchorRect
       auto const *const anchor_rect_list{
           std::get_if<std::vector<flutter::EncodableValue>>(
               &anchor_rect_it->second)};
@@ -129,6 +413,7 @@ void handleCreatePopupWindow(
       auto const anchor_rect_width{std::get<int>(anchor_rect_list->at(2))};
       auto const anchor_rect_height{std::get<int>(anchor_rect_list->at(3))};
 
+      // positionerParentAnchor
       auto const *const positioner_parent_anchor{
           std::get_if<int>(&positioner_parent_anchor_it->second)};
       if (!positioner_parent_anchor) {
@@ -138,6 +423,7 @@ void handleCreatePopupWindow(
         return;
       }
 
+      // positionerChildAnchor
       auto const *const positioner_child_anchor{
           std::get_if<int>(&positioner_child_anchor_it->second)};
       if (!positioner_child_anchor) {
@@ -173,6 +459,7 @@ void handleCreatePopupWindow(
             }
           }(static_cast<mir::Positioner::Anchor>(*positioner_child_anchor))};
 
+      // positionerOffset
       auto const *const positioner_offset_list{
           std::get_if<std::vector<flutter::EncodableValue>>(
               &positioner_offset_it->second)};
@@ -186,6 +473,7 @@ void handleCreatePopupWindow(
       auto const dx{std::get<int>(positioner_offset_list->at(0))};
       auto const dy{std::get<int>(positioner_offset_list->at(1))};
 
+      // positionerConstraintAdjustment
       auto const *const positioner_constraint_adjustment{
           std::get_if<int>(&positioner_constraint_adjustment_it->second)};
       if (!positioner_constraint_adjustment) {
@@ -208,19 +496,11 @@ void handleCreatePopupWindow(
               static_cast<uint32_t>(*positioner_constraint_adjustment)};
 
       // TODO: Set origin according to positioner
-
-      // Set the origin to the mouse position
-      auto const origin{[]() -> Win32Window::Point {
-        POINT point;
-        GetCursorPos(&point);
-        auto *const monitor{MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST)};
-        auto const dpr{FlutterDesktopGetDpiForMonitor(monitor) / base_dpi};
-        return {static_cast<unsigned int>(point.x / dpr),
-                static_cast<unsigned int>(point.y / dpr)};
-      }()};
+      auto const &[origin,
+                   new_size]{applyPositioner(positioner, size, *parent)};
 
       if (auto const view_id{FlutterWindowManager::createPopupWindow(
-              engine, L"popup", origin, size, *parent)}) {
+              engine, L"popup", origin, new_size, *parent)}) {
         result->Success(flutter::EncodableValue(*view_id));
       } else {
         result->Error("UNAVAILABLE", "Can't create window.");
@@ -402,9 +682,22 @@ void FlutterWindowManager::sendOnWindowDestroyed(
 
 void FlutterWindowManager::sendOnWindowResized(flutter::FlutterViewId view_id) {
   if (channel_) {
-    auto const rect{windows_[view_id]->GetClientArea()};
-    auto const width{rect.right - rect.left};
-    auto const height{rect.bottom - rect.top};
+    auto *const hwnd{windows_[view_id]->GetHandle()};
+    RECT frame;
+    if (FAILED(DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &frame,
+                                     sizeof(frame)))) {
+      GetWindowRect(hwnd, &frame);
+    }
+
+    // Convert to logical coordinates
+    auto const dpr{FlutterDesktopGetDpiForHWND(hwnd) / base_dpi};
+    frame.left = static_cast<LONG>(frame.left / dpr);
+    frame.top = static_cast<LONG>(frame.top / dpr);
+    frame.right = static_cast<LONG>(frame.right / dpr);
+    frame.bottom = static_cast<LONG>(frame.bottom / dpr);
+
+    auto const width{frame.right - frame.left};
+    auto const height{frame.bottom - frame.top};
     channel_->InvokeMethod(
         "onWindowResized",
         std::make_unique<flutter::EncodableValue>(flutter::EncodableMap{

@@ -52,7 +52,7 @@ class PopupWindow extends StatelessWidget {
                       const FlutterViewPositioner(
                         parentAnchor: FlutterViewPositionerAnchor.center,
                         childAnchor: FlutterViewPositionerAnchor.center,
-                        offset: Offset(0, 0),
+                        offset: Offset(100, 100),
                         constraintAdjustment: <FlutterViewPositionerConstraintAdjustment>{
                           FlutterViewPositionerConstraintAdjustment.slideX,
                           FlutterViewPositionerConstraintAdjustment.slideY,

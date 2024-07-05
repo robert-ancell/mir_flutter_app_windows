@@ -56,6 +56,16 @@ struct Positioner {
     bottom_right
   };
 
+  enum class ConstraintAdjustment {
+    none = 0,
+    slide_x = 1,
+    slide_y = 2,
+    flip_x = 4,
+    flip_y = 8,
+    resize_x = 16,
+    resize_y = 32
+  };
+
   Rect anchor_rect;
   Anchor anchor;
   Gravity gravity;
