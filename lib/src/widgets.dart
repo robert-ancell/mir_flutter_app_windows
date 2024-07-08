@@ -51,10 +51,6 @@ class _MultiViewAppState extends State<MultiViewApp>
     _updateViews();
   }
 
-  bool _allViewsHaveArchetype() {
-    return _views.values.every((viewData) => viewData.archetype != null);
-  }
-
   void _updateViews() {
     log('updateViews - # of views: ${WidgetsBinding.instance.platformDispatcher.views.length}');
     final Map<int, ViewData> newViews = <int, ViewData>{};
@@ -78,16 +74,15 @@ class _MultiViewAppState extends State<MultiViewApp>
             FlutterViewArchetype.values[call.arguments['archetype']];
         log('onWindowCreated - [id: $viewId] - [$archetype] - [parent: $parentViewId]');
 
-        ViewData? viewData = _views[viewId];
-        if (viewData != null) {
-          viewData.archetype = archetype;
-          if (parentViewId != null && _views[parentViewId] != null) {
-            viewData.parentView = _views[parentViewId]?.view;
+        setState(() {
+          ViewData? viewData = _views[viewId];
+          if (viewData != null) {
+            viewData.archetype = archetype;
+            if (parentViewId != null && _views[parentViewId] != null) {
+              viewData.parentView = _views[parentViewId]?.view;
+            }
           }
-          if (_allViewsHaveArchetype()) {
-            setState(() {});
-          }
-        }
+        });
         break;
       case 'onWindowDestroyed':
         final int viewId = call.arguments['viewId'];
@@ -100,13 +95,12 @@ class _MultiViewAppState extends State<MultiViewApp>
         final Size size = Size(width.toDouble(), height.toDouble());
         log('onWindowResized - [id: $viewId] - [size: (${size.width}, ${size.height})]');
 
-        ViewData? viewData = _views[viewId];
-        if (viewData != null) {
-          viewData.size = size;
-          if (_allViewsHaveArchetype()) {
-            setState(() {});
+        setState(() {
+          ViewData? viewData = _views[viewId];
+          if (viewData != null) {
+            viewData.size = size;
           }
-        }
+        });
     }
   }
 
@@ -125,40 +119,52 @@ class _MultiViewAppState extends State<MultiViewApp>
     } else {
       if (parentView == null) {
         if (children.length == 1) {
-          return View(
-            view: children.first.view,
-            child: _buildTree(children.first.view) ?? children.first.widget,
-          );
+          if (children.first.archetype == null) {
+            return null;
+          } else {
+            return View(
+              view: children.first.view,
+              child: _buildTree(children.first.view) ?? children.first.widget,
+            );
+          }
         } else {
           final List<Widget> widgets = [];
           for (ViewData viewData in children) {
-            Widget widget = View(
-              view: viewData.view,
-              child: _buildTree(viewData.view) ?? viewData.widget,
-            );
-            widgets.add(widget);
+            if (viewData.archetype != null) {
+              Widget widget = View(
+                view: viewData.view,
+                child: _buildTree(viewData.view) ?? viewData.widget,
+              );
+              widgets.add(widget);
+            }
           }
           return ViewCollection(views: widgets);
         }
       } else {
         if (children.length == 1) {
-          return ViewAnchor(
-            view: View(
-              view: children.first.view,
-              child: _buildTree(children.first.view) ?? children.first.widget,
-            ),
-            child: _views.values
-                .where((viewData) => viewData.view == parentView)
-                .single
-                .widget,
-          );
+          if (children.first.archetype == null) {
+            return null;
+          } else {
+            return ViewAnchor(
+              view: View(
+                view: children.first.view,
+                child: _buildTree(children.first.view) ?? children.first.widget,
+              ),
+              child: _views.values
+                  .where((viewData) => viewData.view == parentView)
+                  .single
+                  .widget,
+            );
+          }
         } else {
           final List<Widget> widgets = [];
           for (ViewData viewData in children) {
-            Widget widget = View(
-                view: viewData.view,
-                child: _buildTree(viewData.view) ?? viewData.widget);
-            widgets.add(widget);
+            if (viewData.archetype != null) {
+              Widget widget = View(
+                  view: viewData.view,
+                  child: _buildTree(viewData.view) ?? viewData.widget);
+              widgets.add(widget);
+            }
           }
           return ViewAnchor(
             view: ViewCollection(views: widgets),
@@ -174,18 +180,10 @@ class _MultiViewAppState extends State<MultiViewApp>
 
   @override
   Widget build(BuildContext context) {
-    if (_allViewsHaveArchetype()) {
-      log("build (final tree)");
-      return ViewsInheritedWidget(
-        views: _views,
-        child: _buildTree(null)!,
-      );
-    } else {
-      log("build (placeholder tree)");
-      return View(
-        view: _views.values.first.view,
-        child: const SizedBox.shrink(),
-      );
-    }
+    log("build tree");
+    return ViewsInheritedWidget(
+      views: _views,
+      child: _buildTree(null)!,
+    );
   }
 }

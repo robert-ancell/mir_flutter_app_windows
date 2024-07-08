@@ -585,6 +585,7 @@ auto FlutterWindowManager::createRegularWindow(
   initializeChannel(engine);
   cleanupClosedWindows();
   sendOnWindowCreated(mir::Archetype::regular, view_id, -1);
+  sendOnWindowResized(view_id);
 
   return view_id;
 }
@@ -615,6 +616,7 @@ auto FlutterWindowManager::createPopupWindow(
   cleanupClosedWindows();
   sendOnWindowCreated(mir::Archetype::popup, view_id,
                       parent_view_id ? *parent_view_id : -1);
+  sendOnWindowResized(view_id);
 
   return view_id;
 }
@@ -665,7 +667,6 @@ void FlutterWindowManager::sendOnWindowCreated(
             {flutter::EncodableValue("archetype"),
              flutter::EncodableValue(static_cast<int>(archetype))}}));
   }
-  sendOnWindowResized(view_id);
 }
 
 void FlutterWindowManager::sendOnWindowDestroyed(

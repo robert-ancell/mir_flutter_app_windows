@@ -203,14 +203,11 @@ bool Win32Window::Create(const std::wstring &title, const Point &origin,
   auto const scale_factor = dpi / 96.0;
 
   // TODO(loicsharma): Hide the window until the first frame is rendered.
-  HWND window = nullptr;
+  DWORD window_style{WS_VISIBLE};
+
   switch (archetype) {
   case mir::Archetype::regular:
-    window = CreateWindow(
-        window_class, title.c_str(), WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
-        Scale(size.width, scale_factor), Scale(size.height, scale_factor),
-        parent, nullptr, GetModuleHandle(nullptr), this);
+    window_style |= WS_OVERLAPPEDWINDOW;
     break;
   case mir::Archetype::popup:
     if (auto *const parent_window{GetThisFromHandle(parent)}) {
@@ -219,16 +216,18 @@ bool Win32Window::Create(const std::wstring &title, const Point &origin,
       }
       parent_window->child_popups_.insert(this);
     }
-    window = CreateWindow(
-        window_class, title.c_str(), WS_POPUP, Scale(origin.x, scale_factor),
-        Scale(origin.y, scale_factor), Scale(size.width, scale_factor),
-        Scale(size.height, scale_factor), parent, nullptr,
-        GetModuleHandle(nullptr), this);
+    window_style |= WS_POPUP;
     break;
   // TODO: Handle the remaining archetypes
   default:
     std::unreachable();
   }
+
+  HWND window{CreateWindow(
+      window_class, title.c_str(), window_style, Scale(origin.x, scale_factor),
+      Scale(origin.y, scale_factor), Scale(size.width, scale_factor),
+      Scale(size.height, scale_factor), parent, nullptr,
+      GetModuleHandle(nullptr), this)};
 
   if (!window) {
     return false;

@@ -108,7 +108,6 @@ class _MainPageState extends State<MainWindow> {
   ];
 
   int selectedRowIndex = -1;
-  // int window = 0;
 
   @override
   void initState() {
@@ -118,10 +117,9 @@ class _MainPageState extends State<MainWindow> {
   @override
   Widget build(BuildContext context) {
     final viewDataMap = ViewsInheritedWidget.of(context)!.views;
-    // final viewData = viewDataMap[View.of(context).viewId]!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mir Window Test')),
+      appBar: AppBar(title: Text('Mir Window Test $positionerIndex')),
       body: Column(
         children: [
           Expanded(
@@ -188,7 +186,8 @@ class _MainPageState extends State<MainWindow> {
                                       indexedEntry.value;
                                   final viewData = entry.value;
                                   final viewId = viewData.view.viewId;
-                                  final archetype = viewData.archetype!;
+                                  final archetype = viewData.archetype ??
+                                      FlutterViewArchetype.regular;
                                   final isSelected = selectedRowIndex == index;
 
                                   return DataRow(
@@ -271,9 +270,6 @@ class _MainPageState extends State<MainWindow> {
                                         onPressed: () async {
                                           await createRegularWindow(
                                               windowSettings['regularSize']);
-                                          setState(() {
-                                            selectedRowIndex = -1;
-                                          });
                                         },
                                         child: const Text('Regular'),
                                       ),
@@ -371,7 +367,9 @@ class _MainPageState extends State<MainWindow> {
                                       // ),
                                       // const SizedBox(height: 8),
                                       OutlinedButton(
-                                        onPressed: selectedRowIndex >= 0
+                                        onPressed: selectedRowIndex >= 0 &&
+                                                selectedRowIndex <
+                                                    viewDataMap.length
                                             ? () async {
                                                 final selectedData = viewDataMap
                                                     .entries
@@ -401,14 +399,11 @@ class _MainPageState extends State<MainWindow> {
                                                             'constraintAdjustments'],
                                                   ),
                                                 );
-                                                if (mounted) {
-                                                  setState(() {
-                                                    selectedRowIndex = -1;
-                                                  });
-                                                }
                                               }
                                             : null,
-                                        child: Text(selectedRowIndex >= 0
+                                        child: Text(selectedRowIndex >= 0 &&
+                                                selectedRowIndex <
+                                                    viewDataMap.length
                                             ? 'Popup of ID ${viewDataMap.entries.toList()[selectedRowIndex].key}'
                                             : 'Popup'),
                                       ),
