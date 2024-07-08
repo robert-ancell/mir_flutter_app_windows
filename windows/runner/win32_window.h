@@ -38,9 +38,6 @@ public:
   bool Create(const std::wstring &title, const Point &origin, const Size &size,
               mir::Archetype archetype, HWND parent);
 
-  // Show the current window. Returns true if the window was successfully shown.
-  bool Show();
-
   // Release OS resources associated with window.
   void Destroy();
 

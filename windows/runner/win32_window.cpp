@@ -238,8 +238,6 @@ bool Win32Window::Create(const std::wstring &title, const Point &origin,
   return OnCreate();
 }
 
-bool Win32Window::Show() { return ShowWindow(window_handle_, SW_SHOWNORMAL); }
-
 // static
 LRESULT CALLBACK Win32Window::WndProc(HWND window, UINT message, WPARAM wparam,
                                       LPARAM lparam) {
@@ -253,7 +251,6 @@ LRESULT CALLBACK Win32Window::WndProc(HWND window, UINT message, WPARAM wparam,
     EnableTransparentWindowBackground(window);
     that->window_handle_ = window;
   } else if (Win32Window *that = GetThisFromHandle(window)) {
-    that->Show();
     return that->MessageHandler(window, message, wparam, lparam);
   }
 
