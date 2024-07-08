@@ -117,62 +117,59 @@ class _MultiViewAppState extends State<MultiViewApp>
     if (children.isEmpty) {
       return null;
     } else {
+      getChild(ViewData viewData) =>
+          _buildTree(viewData.view) ?? viewData.widget;
       if (parentView == null) {
         if (children.length == 1) {
-          if (children.first.archetype == null) {
-            return null;
-          } else {
-            return View(
-              view: children.first.view,
-              child: _buildTree(children.first.view) ?? children.first.widget,
-            );
-          }
+          return children.first.archetype != null
+              ? View(
+                  view: children.first.view,
+                  child: getChild(children.first),
+                )
+              : null;
         } else {
           final List<Widget> widgets = [];
-          for (ViewData viewData in children) {
-            if (viewData.archetype != null) {
-              Widget widget = View(
-                view: viewData.view,
-                child: _buildTree(viewData.view) ?? viewData.widget,
-              );
-              widgets.add(widget);
-            }
+          for (ViewData viewData
+              in children.where((viewData) => viewData.archetype != null)) {
+            final Widget widget = View(
+              view: viewData.view,
+              child: getChild(viewData),
+            );
+            widgets.add(widget);
           }
-          return ViewCollection(views: widgets);
+          return widgets.isNotEmpty ? ViewCollection(views: widgets) : null;
         }
       } else {
         if (children.length == 1) {
-          if (children.first.archetype == null) {
-            return null;
-          } else {
-            return ViewAnchor(
-              view: View(
-                view: children.first.view,
-                child: _buildTree(children.first.view) ?? children.first.widget,
-              ),
-              child: _views.values
-                  .where((viewData) => viewData.view == parentView)
-                  .single
-                  .widget,
-            );
-          }
+          return children.first.archetype != null
+              ? ViewAnchor(
+                  view: View(
+                    view: children.first.view,
+                    child: getChild(children.first),
+                  ),
+                  child: _views.values
+                      .where((viewData) => viewData.view == parentView)
+                      .single
+                      .widget,
+                )
+              : null;
         } else {
           final List<Widget> widgets = [];
-          for (ViewData viewData in children) {
-            if (viewData.archetype != null) {
-              Widget widget = View(
-                  view: viewData.view,
-                  child: _buildTree(viewData.view) ?? viewData.widget);
-              widgets.add(widget);
-            }
+          for (ViewData viewData
+              in children.where((viewData) => viewData.archetype != null)) {
+            final Widget widget =
+                View(view: viewData.view, child: getChild(viewData));
+            widgets.add(widget);
           }
-          return ViewAnchor(
-            view: ViewCollection(views: widgets),
-            child: _views.values
-                .where((viewData) => viewData.view == parentView)
-                .single
-                .widget,
-          );
+          return widgets.isNotEmpty
+              ? ViewAnchor(
+                  view: ViewCollection(views: widgets),
+                  child: _views.values
+                      .where((viewData) => viewData.view == parentView)
+                      .single
+                      .widget,
+                )
+              : null;
         }
       }
     }
