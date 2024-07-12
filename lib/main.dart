@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'src/view_data.dart';
+import 'src/app_model.dart';
 import 'src/widgets.dart';
 import 'src/inherited_views.dart';
 
@@ -9,9 +11,11 @@ import 'src/regular_window.dart';
 import 'src/popup_window.dart';
 
 void main() {
-  runWidget(MultiViewApp(
-    viewBuilder: (BuildContext context) => const App(),
-  ));
+  runWidget(ChangeNotifierProvider(
+      create: (context) => AppModel(),
+      child: MultiViewApp(
+        viewBuilder: (BuildContext context) => const App(),
+      )));
 }
 
 class App extends StatelessWidget {

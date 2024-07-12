@@ -1,125 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'custom_positioner_dialog.dart';
 import 'window_settings_dialog.dart';
 
+import 'app_model.dart';
 import 'view_data.dart';
 import 'inherited_views.dart';
 import 'api/windowing_api.dart';
 import 'api/flutter_view_positioner.dart';
 
-class MainWindow extends StatefulWidget {
+class MainWindow extends StatelessWidget {
   const MainWindow({super.key});
-
-  @override
-  State<MainWindow> createState() => _MainPageState();
-}
-
-class _MainPageState extends State<MainWindow> {
-  Map<String, dynamic> windowSettings = {
-    'regularSize': const Size(400, 300),
-    'floatingRegularSize': const Size(300, 300),
-    'dialogSize': const Size(200, 200),
-    'satelliteSize': const Size(150, 300),
-    'popupSize': const Size(200, 200),
-    'tipSize': const Size(140, 140),
-    'anchorRect': const Rect.fromLTWH(0, 0, 1000, 1000),
-  };
-
-  int positionerIndex = 0;
-  List<Map<String, dynamic>> positionerSettings = [
-    // Left
-    <String, dynamic>{
-      'name': 'Left',
-      'parentAnchor': FlutterViewPositionerAnchor.left,
-      'childAnchor': FlutterViewPositionerAnchor.right,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Right
-    <String, dynamic>{
-      'name': 'Right',
-      'parentAnchor': FlutterViewPositionerAnchor.right,
-      'childAnchor': FlutterViewPositionerAnchor.left,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Bottom Left
-    <String, dynamic>{
-      'name': 'Bottom Left',
-      'parentAnchor': FlutterViewPositionerAnchor.bottomLeft,
-      'childAnchor': FlutterViewPositionerAnchor.topRight,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Bottom
-    <String, dynamic>{
-      'name': 'Bottom',
-      'parentAnchor': FlutterViewPositionerAnchor.bottom,
-      'childAnchor': FlutterViewPositionerAnchor.top,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Bottom Right
-    <String, dynamic>{
-      'name': 'Bottom Right',
-      'parentAnchor': FlutterViewPositionerAnchor.bottomRight,
-      'childAnchor': FlutterViewPositionerAnchor.topLeft,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Center
-    <String, dynamic>{
-      'name': 'Center',
-      'parentAnchor': FlutterViewPositionerAnchor.center,
-      'childAnchor': FlutterViewPositionerAnchor.center,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-    // Custom
-    <String, dynamic>{
-      'name': 'Custom',
-      'parentAnchor': FlutterViewPositionerAnchor.left,
-      'childAnchor': FlutterViewPositionerAnchor.right,
-      'offset': const Offset(0, 50),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    }
-  ];
-
-  int selectedRowIndex = -1;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
     final viewDataMap = ViewsInheritedWidget.of(context)!.views;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Mir Window Test $positionerIndex')),
+      appBar: AppBar(
+        title: Consumer<AppModel>(
+          builder: (context, dataProvider, child) {
+            return Text('Mir Window Test ${dataProvider.selectedRowIndex}');
+          },
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -139,100 +44,109 @@ class _MainPageState extends State<MainWindow> {
                             height: 500,
                             child: SingleChildScrollView(
                               scrollDirection: Axis.vertical,
-                              child: DataTable(
-                                showBottomBorder: true,
-                                onSelectAll: (selected) {
-                                  setState(() {
-                                    selectedRowIndex = -1;
-                                  });
-                                },
-                                columns: const [
-                                  DataColumn(
-                                    label: SizedBox(
-                                      width: 20,
-                                      child: Text(
-                                        'ID',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: SizedBox(
-                                      width: 120,
-                                      child: Text(
-                                        'Type',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                      label: SizedBox(
-                                        width: 20,
-                                        child: Text(''),
-                                      ),
-                                      numeric: true),
-                                ],
-                                rows: viewDataMap.entries
-                                    .toList()
-                                    .asMap()
-                                    .entries
-                                    .map<DataRow>((indexedEntry) {
-                                  final index = indexedEntry.key;
-                                  final MapEntry<int, ViewData> entry =
-                                      indexedEntry.value;
-                                  final viewData = entry.value;
-                                  final viewId = viewData.view.viewId;
-                                  final archetype = viewData.archetype ??
-                                      FlutterViewArchetype.regular;
-                                  final isSelected = selectedRowIndex == index;
-
-                                  return DataRow(
-                                    color:
-                                        WidgetStateColor.resolveWith((states) {
-                                      if (states
-                                          .contains(WidgetState.selected)) {
-                                        return Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withOpacity(0.08);
-                                      }
-                                      return Colors.transparent;
-                                    }),
-                                    selected: isSelected,
-                                    onSelectChanged: (selected) {
-                                      setState(() {
-                                        if (selected != null) {
-                                          selectedRowIndex =
-                                              selected ? index : -1;
-                                        }
-                                      });
+                              child: Consumer<AppModel>(
+                                builder: (context, dataProvider, child) {
+                                  return DataTable(
+                                    showBottomBorder: true,
+                                    onSelectAll: (selected) {
+                                      context
+                                          .read<AppModel>()
+                                          .setSelectedRowIndex(-1);
                                     },
-                                    cells: [
-                                      DataCell(
-                                        Text('$viewId'),
-                                      ),
-                                      DataCell(
-                                        Text(archetype.toString().replaceFirst(
-                                            'FlutterViewArchetype.', '')),
-                                      ),
-                                      DataCell(
-                                        IconButton(
-                                          icon:
-                                              const Icon(Icons.delete_outlined),
-                                          onPressed: () {
-                                            destroyWindow(viewId);
-                                            setState(() {});
-                                            // resetWindowId(viewId);
-                                          },
+                                    columns: const [
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 20,
+                                          child: Text(
+                                            'ID',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                          ),
                                         ),
                                       ),
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 120,
+                                          child: Text(
+                                            'Type',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataColumn(
+                                          label: SizedBox(
+                                            width: 20,
+                                            child: Text(''),
+                                          ),
+                                          numeric: true),
                                     ],
+                                    rows: viewDataMap.entries
+                                        .toList()
+                                        .asMap()
+                                        .entries
+                                        .map<DataRow>((indexedEntry) {
+                                      final index = indexedEntry.key;
+                                      final MapEntry<int, ViewData> entry =
+                                          indexedEntry.value;
+                                      final viewData = entry.value;
+                                      final viewId = viewData.view.viewId;
+                                      final archetype = viewData.archetype ??
+                                          FlutterViewArchetype.regular;
+                                      final isSelected =
+                                          dataProvider.selectedRowIndex ==
+                                              index;
+
+                                      return DataRow(
+                                        color: WidgetStateColor.resolveWith(
+                                            (states) {
+                                          if (states
+                                              .contains(WidgetState.selected)) {
+                                            return Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.08);
+                                          }
+                                          return Colors.transparent;
+                                        }),
+                                        selected: isSelected,
+                                        onSelectChanged: (selected) {
+                                          // setState(() {
+                                          if (selected != null) {
+                                            context
+                                                .read<AppModel>()
+                                                .setSelectedRowIndex(
+                                                    selected ? index : -1);
+                                          }
+                                          // });
+                                        },
+                                        cells: [
+                                          DataCell(
+                                            Text('$viewId'),
+                                          ),
+                                          DataCell(
+                                            Text(archetype
+                                                .toString()
+                                                .replaceFirst(
+                                                    'FlutterViewArchetype.',
+                                                    '')),
+                                          ),
+                                          DataCell(
+                                            IconButton(
+                                              icon: const Icon(
+                                                  Icons.delete_outlined),
+                                              onPressed: () {
+                                                destroyWindow(viewId);
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
                                   );
-                                }).toList(),
+                                },
                               ),
                             ),
                           ),
@@ -266,12 +180,18 @@ class _MainPageState extends State<MainWindow> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                      OutlinedButton(
-                                        onPressed: () async {
-                                          await createRegularWindow(
-                                              windowSettings['regularSize']);
+                                      Consumer<AppModel>(
+                                        builder:
+                                            (context, dataProvider, child) {
+                                          return OutlinedButton(
+                                            onPressed: () async {
+                                              await createRegularWindow(
+                                                  dataProvider.windowSettings[
+                                                      'regularSize']);
+                                            },
+                                            child: const Text('Regular'),
+                                          );
                                         },
-                                        child: const Text('Regular'),
                                       ),
                                       const SizedBox(height: 8),
                                       // OutlinedButton(
@@ -366,46 +286,62 @@ class _MainPageState extends State<MainWindow> {
                                       //       : 'Satellite'),
                                       // ),
                                       // const SizedBox(height: 8),
-                                      OutlinedButton(
-                                        onPressed: selectedRowIndex >= 0 &&
-                                                selectedRowIndex <
-                                                    viewDataMap.length
-                                            ? () async {
-                                                final selectedData = viewDataMap
-                                                    .entries
-                                                    .toList()[selectedRowIndex]
-                                                    .value;
-                                                await createPopupWindow(
-                                                  selectedData.view,
-                                                  windowSettings['popupSize'],
-                                                  clampAnchorRectToSize(
-                                                      selectedData.size),
-                                                  FlutterViewPositioner(
-                                                    parentAnchor:
-                                                        positionerSettings[
-                                                                positionerIndex]
-                                                            ['parentAnchor'],
-                                                    childAnchor:
-                                                        positionerSettings[
-                                                                positionerIndex]
-                                                            ['childAnchor'],
-                                                    offset: positionerSettings[
-                                                            positionerIndex]
-                                                        ['offset'],
-                                                    constraintAdjustment:
-                                                        positionerSettings[
-                                                                positionerIndex]
-                                                            [
-                                                            'constraintAdjustments'],
-                                                  ),
-                                                );
-                                              }
-                                            : null,
-                                        child: Text(selectedRowIndex >= 0 &&
-                                                selectedRowIndex <
-                                                    viewDataMap.length
-                                            ? 'Popup of ID ${viewDataMap.entries.toList()[selectedRowIndex].key}'
-                                            : 'Popup'),
+                                      Consumer<AppModel>(
+                                        builder:
+                                            (context, dataProvider, child) {
+                                          final selectedRowIndex =
+                                              dataProvider.selectedRowIndex;
+                                          final selectedPositionerSettings =
+                                              dataProvider.positionerSettings[
+                                                  dataProvider.positionerIndex];
+                                          return OutlinedButton(
+                                            onPressed: selectedRowIndex >= 0 &&
+                                                    selectedRowIndex <
+                                                        viewDataMap.length
+                                                ? () async {
+                                                    final selectedData =
+                                                        viewDataMap
+                                                            .entries
+                                                            .toList()[
+                                                                selectedRowIndex]
+                                                            .value;
+                                                    await createPopupWindow(
+                                                      selectedData.view,
+                                                      dataProvider
+                                                              .windowSettings[
+                                                          'popupSize'],
+                                                      clampRectToSize(
+                                                          dataProvider
+                                                                  .windowSettings[
+                                                              'anchorRect'],
+                                                          selectedData.size),
+                                                      FlutterViewPositioner(
+                                                        parentAnchor:
+                                                            selectedPositionerSettings[
+                                                                'parentAnchor'],
+                                                        childAnchor:
+                                                            selectedPositionerSettings[
+                                                                'childAnchor'],
+                                                        offset:
+                                                            selectedPositionerSettings[
+                                                                'offset'],
+                                                        constraintAdjustment:
+                                                            selectedPositionerSettings[
+                                                                'constraintAdjustments'],
+                                                      ),
+                                                    );
+                                                  }
+                                                : null,
+                                            child: Text(dataProvider
+                                                            .selectedRowIndex >=
+                                                        0 &&
+                                                    dataProvider
+                                                            .selectedRowIndex <
+                                                        viewDataMap.length
+                                                ? 'Popup of ID ${viewDataMap.entries.toList()[dataProvider.selectedRowIndex].key}'
+                                                : 'Popup'),
+                                          );
+                                        },
                                       ),
                                       // const SizedBox(height: 8),
                                       // OutlinedButton(
@@ -462,18 +398,28 @@ class _MainPageState extends State<MainWindow> {
                                       const SizedBox(height: 8),
                                       Container(
                                         alignment: Alignment.bottomRight,
-                                        child: TextButton(
-                                          child: const Text('SETTINGS'),
-                                          onPressed: () {
-                                            windowSettingsDialog(
-                                                    context, windowSettings)
-                                                .then(
-                                              (Map<String, dynamic>? settings) {
-                                                setState(() {
-                                                  if (settings != null) {
-                                                    windowSettings = settings;
-                                                  }
-                                                });
+                                        child: Consumer<AppModel>(
+                                          builder:
+                                              (context, dataProvider, child) {
+                                            return TextButton(
+                                              child: const Text('SETTINGS'),
+                                              onPressed: () {
+                                                windowSettingsDialog(
+                                                        context,
+                                                        dataProvider
+                                                            .windowSettings)
+                                                    .then(
+                                                  (Map<String, dynamic>?
+                                                      settings) {
+                                                    if (context.mounted &&
+                                                        settings != null) {
+                                                      context
+                                                          .read<AppModel>()
+                                                          .setWindowSettings(
+                                                              settings);
+                                                    }
+                                                  },
+                                                );
                                               },
                                             );
                                           },
@@ -506,30 +452,44 @@ class _MainPageState extends State<MainWindow> {
                                   ),
                                   ListTile(
                                     title: const Text('Preset'),
-                                    subtitle: DropdownButton(
-                                      items: positionerSettings
-                                          .map((map) => map['name'] as String)
-                                          .toList()
-                                          .map<DropdownMenuItem<String>>(
-                                              (String value) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                      value: positionerSettings
-                                          .map((map) => map['name'] as String)
-                                          .toList()[positionerIndex],
-                                      isExpanded: true,
-                                      focusColor: Colors.transparent,
-                                      onChanged: (String? value) {
-                                        setState(() {
-                                          positionerIndex = positionerSettings
+                                    subtitle: Consumer<AppModel>(
+                                      builder: (context, dataProvider, child) {
+                                        List<Map<String, dynamic>>
+                                            positionerSettings =
+                                            dataProvider.positionerSettings;
+                                        return DropdownButton(
+                                          items: positionerSettings
                                               .map((map) =>
                                                   map['name'] as String)
                                               .toList()
-                                              .indexOf(value!);
-                                        });
+                                              .map<DropdownMenuItem<String>>(
+                                                  (String value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            );
+                                          }).toList(),
+                                          value: positionerSettings
+                                                  .map((map) =>
+                                                      map['name'] as String)
+                                                  .toList()[
+                                              dataProvider.positionerIndex],
+                                          isExpanded: true,
+                                          focusColor: Colors.transparent,
+                                          onChanged: (String? value) {
+                                            // setState(() {
+                                            context
+                                                .read<AppModel>()
+                                                .setPositionerIndex(
+                                                    positionerSettings
+                                                        .map((map) =>
+                                                            map['name']
+                                                                as String)
+                                                        .toList()
+                                                        .indexOf(value!));
+                                            // });
+                                          },
+                                        );
                                       },
                                     ),
                                   ),
@@ -537,29 +497,37 @@ class _MainPageState extends State<MainWindow> {
                                     alignment: Alignment.bottomRight,
                                     child: Padding(
                                       padding: const EdgeInsets.only(right: 10),
-                                      child: TextButton(
-                                        child: const Text('CUSTOM PRESET'),
-                                        onPressed: () {
-                                          customPositionerDialog(
-                                                  context,
-                                                  positionerSettings[
-                                                      positionerSettings
-                                                              .length -
-                                                          1])
-                                              .then(
-                                            (Map<String, dynamic>? settings) {
-                                              setState(() {
-                                                if (settings != null) {
-                                                  positionerSettings[
-                                                      positionerSettings
-                                                              .length -
-                                                          1] = settings;
-                                                  positionerIndex =
-                                                      positionerSettings
-                                                              .length -
-                                                          1;
-                                                }
-                                              });
+                                      child: Consumer<AppModel>(
+                                        builder:
+                                            (context, dataProvider, child) {
+                                          return TextButton(
+                                            child: const Text('CUSTOM PRESET'),
+                                            onPressed: () {
+                                              customPositionerDialog(
+                                                      context,
+                                                      dataProvider
+                                                          .positionerSettings
+                                                          .last)
+                                                  .then(
+                                                (Map<String, dynamic>?
+                                                    settings) {
+                                                  if (settings != null) {
+                                                    if (context.mounted) {
+                                                      context
+                                                          .read<AppModel>()
+                                                          .setPositionerIndex(
+                                                              dataProvider
+                                                                      .positionerSettings
+                                                                      .length -
+                                                                  1);
+                                                      context
+                                                          .read<AppModel>()
+                                                          .setCustomPositionerSettings(
+                                                              settings);
+                                                    }
+                                                  }
+                                                },
+                                              );
                                             },
                                           );
                                         },
@@ -588,11 +556,11 @@ class _MainPageState extends State<MainWindow> {
     channel.invokeMethod('destroyWindow', [windowId]);
   }
 
-  Rect clampAnchorRectToSize(Size? size) {
-    double left = windowSettings['anchorRect'].left.clamp(0, size?.width);
-    double top = windowSettings['anchorRect'].top.clamp(0, size?.height);
-    double right = windowSettings['anchorRect'].right.clamp(0, size?.width);
-    double bottom = windowSettings['anchorRect'].bottom.clamp(0, size?.height);
+  Rect clampRectToSize(Rect anchorRect, Size? size) {
+    double left = anchorRect.left.clamp(0, size?.width as double);
+    double top = anchorRect.top.clamp(0, size?.height as double);
+    double right = anchorRect.right.clamp(0, size?.width as double);
+    double bottom = anchorRect.bottom.clamp(0, size?.height as double);
     return Rect.fromLTRB(left, top, right, bottom);
   }
 }
