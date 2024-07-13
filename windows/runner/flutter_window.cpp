@@ -46,7 +46,8 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   if (flutter_controller_) {
-    FlutterWindowManager::destroyWindow(flutter_controller_->view_id(), false);
+    FlutterWindowManager::instance().destroyWindow(
+        flutter_controller_->view_id(), false);
     if (flutter_controller_) {
       flutter_controller_ = nullptr;
     }
@@ -74,7 +75,8 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     break;
   case WM_SIZE:
     if (flutter_controller_) {
-      FlutterWindowManager::sendOnWindowResized(flutter_controller_->view_id());
+      FlutterWindowManager::instance().sendOnWindowResized(
+          flutter_controller_->view_id());
     }
     break;
   default:

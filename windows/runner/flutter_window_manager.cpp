@@ -30,7 +30,7 @@ std::tuple<Win32Window::Point, Win32Window::Size>
 applyPositioner(mir::Positioner const &positioner,
                 Win32Window::Size const &size,
                 flutter::FlutterViewId parent_view_id) {
-  auto const &windows{FlutterWindowManager::windows()};
+  auto const &windows{FlutterWindowManager::instance().windows()};
   auto const &parent_window{windows.at(parent_view_id)};
   auto const &parent_hwnd{parent_window->GetHandle()};
   auto const dpr{FlutterDesktopGetDpiForHWND(parent_hwnd) / base_dpi};
@@ -306,7 +306,6 @@ applyPositioner(mir::Positioner const &positioner,
 }
 
 void handleCreateRegularWindow(
-    std::shared_ptr<flutter::FlutterEngine> const &engine,
     flutter::MethodCall<> const &call,
     std::unique_ptr<flutter::MethodResult<>> &result) {
   auto const *const arguments{call.arguments()};
@@ -322,14 +321,15 @@ void handleCreateRegularWindow(
 
         // Window will be centered within the 'main window'
         auto const origin{[size]() -> Win32Window::Point {
-          auto const &windows{FlutterWindowManager::windows()};
+          auto const &windows{FlutterWindowManager::instance().windows()};
           return windows.contains(0)
                      ? calculateCenteredOrigin(size, windows.at(0)->GetHandle())
                      : Win32Window::Point{0, 0};
         }()};
 
-        if (auto const view_id{FlutterWindowManager::createRegularWindow(
-                engine, L"regular", origin, size)}) {
+        if (auto const view_id{
+                FlutterWindowManager::instance().createRegularWindow(
+                    L"regular", origin, size)}) {
           result->Success(flutter::EncodableValue(*view_id));
         } else {
           result->Error("UNAVAILABLE", "Can't create window.");
@@ -349,7 +349,6 @@ void handleCreateRegularWindow(
 }
 
 void handleCreatePopupWindow(
-    std::shared_ptr<flutter::FlutterEngine> const &engine,
     flutter::MethodCall<> const &call,
     std::unique_ptr<flutter::MethodResult<>> &result) {
   auto const *const arguments{call.arguments()};
@@ -495,12 +494,11 @@ void handleCreatePopupWindow(
           .constraint_adjustment =
               static_cast<uint32_t>(*positioner_constraint_adjustment)};
 
-      // TODO: Set origin according to positioner
       auto const &[origin,
                    new_size]{applyPositioner(positioner, size, *parent)};
 
-      if (auto const view_id{FlutterWindowManager::createPopupWindow(
-              engine, L"popup", origin, new_size, *parent)}) {
+      if (auto const view_id{FlutterWindowManager::instance().createPopupWindow(
+              L"popup", origin, new_size, *parent)}) {
         result->Success(flutter::EncodableValue(*view_id));
       } else {
         result->Error("UNAVAILABLE", "Can't create window.");
@@ -525,7 +523,7 @@ void handleDestroyWindow(flutter::MethodCall<> const &call,
     result->Error("INVALID_VALUE", "Value argument is not valid.");
   } else {
     auto const view_id{std::get<int>(arguments[0])};
-    if (FlutterWindowManager::destroyWindow(view_id, true)) {
+    if (FlutterWindowManager::instance().destroyWindow(view_id, true)) {
       result->Success();
     } else {
       result->Error("UNAVAILABLE", "Can't destroy window.");
@@ -535,19 +533,18 @@ void handleDestroyWindow(flutter::MethodCall<> const &call,
 
 } // namespace
 
-void FlutterWindowManager::initializeChannel(
-    std::shared_ptr<flutter::FlutterEngine> const &engine) {
+void FlutterWindowManager::initializeChannel() {
   if (!channel_) {
     channel_ = std::make_unique<flutter::MethodChannel<>>(
-        engine->messenger(), CHANNEL,
+        engine_->messenger(), CHANNEL,
         &flutter::StandardMethodCodec::GetInstance());
     channel_->SetMethodCallHandler(
-        [engine](flutter::MethodCall<> const &call,
-                 std::unique_ptr<flutter::MethodResult<>> result) {
+        [this](flutter::MethodCall<> const &call,
+               std::unique_ptr<flutter::MethodResult<>> result) {
           if (call.method_name() == "createRegularWindow") {
-            handleCreateRegularWindow(engine, call, result);
+            handleCreateRegularWindow(call, result);
           } else if (call.method_name() == "createPopupWindow") {
-            handleCreatePopupWindow(engine, call, result);
+            handleCreatePopupWindow(call, result);
           } else if (call.method_name() == "destroyWindow") {
             handleDestroyWindow(call, result);
           } else {
@@ -560,19 +557,32 @@ void FlutterWindowManager::initializeChannel(
     // created in the entrypoint of the runner code. This is required because
     // the channel's message handler is set up on the Dart side only after the
     // first call to State::didUpdateWidget.
-    channel_->Resize(16);
+    auto const max_windows_on_startup{16};
+    channel_->Resize(max_windows_on_startup);
   }
 }
 
-auto FlutterWindowManager::createRegularWindow(
-    std::shared_ptr<flutter::FlutterEngine> const &engine,
-    std::wstring const &title, Win32Window::Point const &origin,
-    Win32Window::Size const &size)
+void FlutterWindowManager::setEngine(
+    std::shared_ptr<flutter::FlutterEngine> engine) {
+  std::lock_guard<std::mutex> const lock(mutex_);
+  engine_ = std::move(engine);
+}
+
+auto FlutterWindowManager::createRegularWindow(std::wstring const &title,
+                                               Win32Window::Point const &origin,
+                                               Win32Window::Size const &size)
     -> std::expected<flutter::FlutterViewId, Error> {
-  auto window{std::make_unique<FlutterWindow>(engine)};
+  std::unique_lock lock(mutex_);
+  if (!engine_) {
+    return std::unexpected<Error>(Error::EngineNotSet);
+  }
+  auto window{std::make_unique<FlutterWindow>(engine_)};
+
+  lock.unlock();
   if (!window->Create(title, origin, size, mir::Archetype::regular, nullptr)) {
     return std::unexpected(Error::Win32Error);
   }
+  lock.lock();
 
   // Assume first window is the main window
   if (windows_.empty()) {
@@ -582,20 +592,25 @@ auto FlutterWindowManager::createRegularWindow(
   auto const view_id{window->flutter_controller()->view_id()};
   windows_[view_id] = std::move(window);
 
-  initializeChannel(engine);
+  initializeChannel();
   cleanupClosedWindows();
   sendOnWindowCreated(mir::Archetype::regular, view_id, -1);
+
+  lock.unlock();
   sendOnWindowResized(view_id);
 
   return view_id;
 }
 
 auto FlutterWindowManager::createPopupWindow(
-    std::shared_ptr<flutter::FlutterEngine> const &engine,
     std::wstring const &title, Win32Window::Point const &origin,
     Win32Window::Size const &size,
     std::optional<flutter::FlutterViewId> parent_view_id)
     -> std::expected<flutter::FlutterViewId, Error> {
+  std::unique_lock lock(mutex_);
+  if (!engine_) {
+    return std::unexpected<Error>(Error::EngineNotSet);
+  }
   if (windows_.empty()) {
     return std::unexpected(Error::CannotBeFirstWindow);
   }
@@ -603,19 +618,24 @@ auto FlutterWindowManager::createPopupWindow(
   auto *const parent_hwnd{parent_view_id && windows_.contains(*parent_view_id)
                               ? windows_[*parent_view_id].get()->GetHandle()
                               : nullptr};
-  auto window{std::make_unique<FlutterWindow>(engine)};
+  auto window{std::make_unique<FlutterWindow>(engine_)};
+
+  lock.unlock();
   if (!window->Create(title, origin, size, mir::Archetype::popup,
                       parent_hwnd)) {
     return std::unexpected(Error::Win32Error);
   }
+  lock.lock();
 
   auto const view_id{window->flutter_controller()->view_id()};
   windows_[view_id] = std::move(window);
 
-  initializeChannel(engine);
+  initializeChannel();
   cleanupClosedWindows();
   sendOnWindowCreated(mir::Archetype::popup, view_id,
                       parent_view_id ? *parent_view_id : -1);
+
+  lock.unlock();
   sendOnWindowResized(view_id);
 
   return view_id;
@@ -623,16 +643,22 @@ auto FlutterWindowManager::createPopupWindow(
 
 auto FlutterWindowManager::destroyWindow(flutter::FlutterViewId view_id,
                                          bool destroy_native_window) -> bool {
+  std::unique_lock lock(mutex_);
   if (windows_.contains(view_id)) {
     if (windows_[view_id]->GetQuitOnClose()) {
       for (auto &[id, window] : windows_) {
         if (id != view_id && window->flutter_controller()) {
+          lock.unlock();
           window->Destroy();
+          lock.lock();
         }
       }
     }
     if (destroy_native_window) {
-      windows_[view_id]->Destroy();
+      auto const &window{windows_[view_id]};
+      lock.unlock();
+      window->Destroy();
+      lock.lock();
     }
     sendOnWindowDestroyed(view_id);
     return true;
@@ -646,16 +672,20 @@ void FlutterWindowManager::cleanupClosedWindows() {
   });
 }
 
-auto FlutterWindowManager::windows() -> WindowMap const & { return windows_; }
+auto FlutterWindowManager::windows() const -> WindowMap const & {
+  std::lock_guard const lock(mutex_);
+  return windows_;
+}
 
-auto FlutterWindowManager::channel()
+auto FlutterWindowManager::channel() const
     -> std::unique_ptr<flutter::MethodChannel<>> const & {
+  std::lock_guard const lock(mutex_);
   return channel_;
 };
 
 void FlutterWindowManager::sendOnWindowCreated(
     mir::Archetype archetype, flutter::FlutterViewId view_id,
-    flutter::FlutterViewId parent_view_id) {
+    flutter::FlutterViewId parent_view_id) const {
   if (channel_) {
     channel_->InvokeMethod(
         "onWindowCreated",
@@ -670,7 +700,7 @@ void FlutterWindowManager::sendOnWindowCreated(
 }
 
 void FlutterWindowManager::sendOnWindowDestroyed(
-    flutter::FlutterViewId view_id) {
+    flutter::FlutterViewId view_id) const {
   if (channel_) {
     channel_->InvokeMethod(
         "onWindowDestroyed",
@@ -681,9 +711,11 @@ void FlutterWindowManager::sendOnWindowDestroyed(
   }
 }
 
-void FlutterWindowManager::sendOnWindowResized(flutter::FlutterViewId view_id) {
+void FlutterWindowManager::sendOnWindowResized(
+    flutter::FlutterViewId view_id) const {
+  std::lock_guard const lock(mutex_);
   if (channel_) {
-    auto *const hwnd{windows_[view_id]->GetHandle()};
+    auto *const hwnd{windows_.at(view_id)->GetHandle()};
     RECT frame;
     if (FAILED(DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &frame,
                                      sizeof(frame)))) {

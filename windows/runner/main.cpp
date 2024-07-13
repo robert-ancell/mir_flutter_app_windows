@@ -25,12 +25,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   auto const engine{std::make_shared<flutter::FlutterEngine>(project)};
   RegisterPlugins(engine.get());
 
-  if (!FlutterWindowManager::createRegularWindow(engine, L"Main window",
-                                                 {10, 10}, {700, 650}) ||
-      !FlutterWindowManager::createRegularWindow(engine, L"window #1",
-                                                 {710, 10}, {400, 320}) ||
-      !FlutterWindowManager::createRegularWindow(engine, L"window #2",
-                                                 {710, 340}, {400, 320})) {
+  FlutterWindowManager::instance().setEngine(engine);
+  if (!FlutterWindowManager::instance().createRegularWindow(
+          L"Main window", {10, 10}, {700, 650}) ||
+      !FlutterWindowManager::instance().createRegularWindow(
+          L"window #1", {710, 10}, {400, 320}) ||
+      !FlutterWindowManager::instance().createRegularWindow(
+          L"window #2", {710, 340}, {400, 320})) {
     return EXIT_FAILURE;
   }
 

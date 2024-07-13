@@ -180,7 +180,10 @@ class _MultiViewAppState extends State<MultiViewApp>
     log("build tree");
     return ViewsInheritedWidget(
       views: _views,
-      child: _buildTree(null) ?? Container(),
+      child: _buildTree(null) ??
+          View(
+              view: _views.entries.first.value.view,
+              child: const SizedBox.shrink()),
     );
   }
 }

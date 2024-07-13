@@ -7,47 +7,61 @@
 #include "mir_windowing_types.h"
 
 #include <expected>
+#include <mutex>
 
 class FlutterWindowManager {
 public:
+  FlutterWindowManager(FlutterWindowManager const &) = delete;
+  FlutterWindowManager(FlutterWindowManager &&) = delete;
+  FlutterWindowManager &operator=(FlutterWindowManager const &) = delete;
+  FlutterWindowManager &operator=(FlutterWindowManager &&) = delete;
+  ~FlutterWindowManager() = default;
+
   enum class Error {
     Win32Error,
     CannotBeFirstWindow,
+    EngineNotSet,
   };
   using WindowMap = std::unordered_map<flutter::FlutterViewId,
                                        std::unique_ptr<FlutterWindow>>;
 
-  static auto
-  createRegularWindow(std::shared_ptr<flutter::FlutterEngine> const &engine,
-                      std::wstring const &title,
-                      Win32Window::Point const &origin,
-                      Win32Window::Size const &size)
+  static FlutterWindowManager &instance() {
+    static FlutterWindowManager instance;
+    return instance;
+  }
+
+  void setEngine(std::shared_ptr<flutter::FlutterEngine> engine);
+  auto createRegularWindow(std::wstring const &title,
+                           Win32Window::Point const &origin,
+                           Win32Window::Size const &size)
       -> std::expected<flutter::FlutterViewId, Error>;
-  static auto createPopupWindow(
-      std::shared_ptr<flutter::FlutterEngine> const &engine,
+  auto createPopupWindow(
       std::wstring const &title, Win32Window::Point const &origin,
       Win32Window::Size const &size,
       std::optional<flutter::FlutterViewId> parent_view_id = std::nullopt)
       -> std::expected<flutter::FlutterViewId, Error>;
-  static auto destroyWindow(flutter::FlutterViewId view_id,
-                            bool destroy_native_window) -> bool;
-  static auto windows() -> WindowMap const &;
-  static auto channel() -> std::unique_ptr<flutter::MethodChannel<>> const&;
+  auto destroyWindow(flutter::FlutterViewId view_id,
+                     bool destroy_native_window) -> bool;
+  auto windows() const -> WindowMap const &;
+  auto channel() const -> std::unique_ptr<flutter::MethodChannel<>> const &;
 
 private:
   friend class FlutterWindow;
 
-  static void
-  initializeChannel(std::shared_ptr<flutter::FlutterEngine> const &engine);
-  static void sendOnWindowCreated(mir::Archetype archetype,
-                                  flutter::FlutterViewId view_id,
-                                  flutter::FlutterViewId parent_view_id);
-  static void sendOnWindowDestroyed(flutter::FlutterViewId view_id);
-  static void sendOnWindowResized(flutter::FlutterViewId view_id);
-  static void cleanupClosedWindows();
+  FlutterWindowManager() = default;
 
-  static inline std::unique_ptr<flutter::MethodChannel<>> channel_;
-  static inline WindowMap windows_;
+  void initializeChannel();
+  void sendOnWindowCreated(mir::Archetype archetype,
+                           flutter::FlutterViewId view_id,
+                           flutter::FlutterViewId parent_view_id) const;
+  void sendOnWindowDestroyed(flutter::FlutterViewId view_id) const;
+  void sendOnWindowResized(flutter::FlutterViewId view_id) const;
+  void cleanupClosedWindows();
+
+  mutable std::mutex mutex_;
+  std::unique_ptr<flutter::MethodChannel<>> channel_;
+  std::shared_ptr<flutter::FlutterEngine> engine_;
+  WindowMap windows_;
 };
 
 #endif // RUNNER_FLUTTER_WINDOW_MANAGER_H_

@@ -294,7 +294,7 @@ Win32Window::MessageHandler(HWND hwnd, UINT message, WPARAM wparam,
       if (archetype_ != mir::Archetype::popup) {
         // If this window is not a popup and is being activated, close the
         // popups anchored to other windows
-        for (auto const &[_, window] : FlutterWindowManager::windows()) {
+        for (auto const &[_, window] : FlutterWindowManager::instance().windows()) {
           window->CloseChildPopups();
         }
       }
