@@ -5,6 +5,8 @@
 
 #include <dwmapi.h>
 
+#include <algorithm>
+
 namespace {
 auto *const CHANNEL{"io.mir-server/window"};
 auto const base_dpi{96.0};
@@ -137,7 +139,16 @@ applyPositioner(mir::Positioner const &positioner,
       calculate_origin(parent_anchor_point, child_anchor_point, offset)};
 
   // Constraint adjustments
-  if (origin_dc.x < 0 || origin_dc.x + child_size.x > monitor_rect.right) {
+
+  auto const is_constrained_along_x{[&]() {
+    return origin_dc.x < 0 || origin_dc.x + child_size.x > monitor_rect.right;
+  }};
+  auto const is_constrained_along_y{[&]() {
+    return origin_dc.y < 0 || origin_dc.y + child_size.y > monitor_rect.bottom;
+  }};
+
+  // X axis
+  if (is_constrained_along_x()) {
     auto const reverse_anchor_along_x{[](mir::Positioner::Anchor anchor) {
       switch (anchor) {
       case mir::Positioner::Anchor::left:
@@ -180,43 +191,49 @@ applyPositioner(mir::Positioner const &positioner,
         static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_x)) {
       anchor = reverse_anchor_along_x(anchor);
       gravity = reverse_gravity_along_x(gravity);
-      offset = {-offset.x, offset.y};
       parent_anchor_point = get_parent_anchor_point(anchor);
       child_anchor_point = get_child_anchor_point(gravity);
-      origin_dc =
-          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+      auto const saved_origin_dc{std::exchange(
+          origin_dc,
+          calculate_origin(parent_anchor_point, child_anchor_point, offset))};
+      if (is_constrained_along_x()) {
+        origin_dc = saved_origin_dc;
+      }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
                    mir::Positioner::ConstraintAdjustment::slide_x)) {
+      // TODO: Slide towards the direction of the gravity first
       if (origin_dc.x < 0) {
         auto const diff{abs(origin_dc.x)};
         offset = {offset.x + diff, offset.y};
-      } else {
+        origin_dc =
+            calculate_origin(parent_anchor_point, child_anchor_point, offset);
+      }
+      if (origin_dc.x + child_size.x > monitor_rect.right) {
         auto const diff{(origin_dc.x + child_size.x) - monitor_rect.right};
         offset = {offset.x - diff, offset.y};
+        origin_dc =
+            calculate_origin(parent_anchor_point, child_anchor_point, offset);
       }
-      origin_dc =
-          calculate_origin(parent_anchor_point, child_anchor_point, offset);
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
                    mir::Positioner::ConstraintAdjustment::resize_x)) {
       if (origin_dc.x < 0) {
-        auto const diff{abs(origin_dc.x)};
+        auto const diff{std::clamp(abs(origin_dc.x), 1.0, child_size.x - 1)};
         origin_dc.x += diff;
         child_size.x -= diff;
-        if (child_size.x < 1) {
-          child_size.x = 1;
-        }
-      } else {
-        auto const diff{(origin_dc.x + child_size.x) - monitor_rect.right};
+      }
+      if (origin_dc.x + child_size.x > monitor_rect.right) {
+        auto const diff{
+            std::clamp((origin_dc.x + child_size.x) - monitor_rect.right, 1.0,
+                       child_size.x - 1)};
         child_size.x -= diff;
-        if (child_size.x < 1) {
-          child_size.x = 1;
-        }
       }
     }
   }
-  if (origin_dc.y < 0 || origin_dc.y + child_size.y > monitor_rect.bottom) {
+
+  // Y axis
+  if (is_constrained_along_y()) {
     auto const reverse_anchor_along_y{[](mir::Positioner::Anchor anchor) {
       switch (anchor) {
       case mir::Positioner::Anchor::top:
@@ -259,39 +276,43 @@ applyPositioner(mir::Positioner const &positioner,
         static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_y)) {
       anchor = reverse_anchor_along_y(anchor);
       gravity = reverse_gravity_along_y(gravity);
-      offset = {offset.x, -offset.y};
       parent_anchor_point = get_parent_anchor_point(anchor);
       child_anchor_point = get_child_anchor_point(gravity);
-      origin_dc =
-          calculate_origin(parent_anchor_point, child_anchor_point, offset);
+      auto const saved_origin_dc{std::exchange(
+          origin_dc,
+          calculate_origin(parent_anchor_point, child_anchor_point, offset))};
+      if (is_constrained_along_y()) {
+        origin_dc = saved_origin_dc;
+      }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
                    mir::Positioner::ConstraintAdjustment::slide_y)) {
+      // TODO: Slide towards the direction of the gravity first
       if (origin_dc.y < 0) {
         auto const diff{abs(origin_dc.y)};
         offset = {offset.x, offset.y + diff};
-      } else {
+        origin_dc =
+            calculate_origin(parent_anchor_point, child_anchor_point, offset);
+      }
+      if (origin_dc.y + child_size.y > monitor_rect.bottom) {
         auto const diff{(origin_dc.y + child_size.y) - monitor_rect.bottom};
         offset = {offset.x, offset.y - diff};
+        origin_dc =
+            calculate_origin(parent_anchor_point, child_anchor_point, offset);
       }
-      origin_dc =
-          calculate_origin(parent_anchor_point, child_anchor_point, offset);
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
                    mir::Positioner::ConstraintAdjustment::resize_y)) {
       if (origin_dc.y < 0) {
-        auto const diff{abs(origin_dc.y)};
+        auto const diff{std::clamp(abs(origin_dc.y), 1.0, child_size.y - 1)};
         origin_dc.y += diff;
         child_size.y -= diff;
-        if (child_size.y < 1) {
-          child_size.y = 1;
-        }
-      } else {
-        auto const diff{(origin_dc.y + child_size.y) - monitor_rect.bottom};
+      }
+      if (origin_dc.y + child_size.y > monitor_rect.bottom) {
+        auto const diff{
+            std::clamp((origin_dc.y + child_size.y) - monitor_rect.bottom, 1.0,
+                       child_size.y - 1)};
         child_size.y -= diff;
-        if (child_size.y < 1) {
-          child_size.y = 1;
-        }
       }
     }
   }
@@ -348,9 +369,8 @@ void handleCreateRegularWindow(
   }
 }
 
-void handleCreatePopupWindow(
-    flutter::MethodCall<> const &call,
-    std::unique_ptr<flutter::MethodResult<>> &result) {
+void handleCreatePopupWindow(flutter::MethodCall<> const &call,
+                             std::unique_ptr<flutter::MethodResult<>> &result) {
   auto const *const arguments{call.arguments()};
   if (auto const *const map{std::get_if<flutter::EncodableMap>(arguments)}) {
     auto const parent_it{map->find(flutter::EncodableValue("parent"))};
