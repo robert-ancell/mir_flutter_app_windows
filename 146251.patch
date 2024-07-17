@@ -17,3 +17,4 @@ index 45b05a00dd..2a179d3b50 100644
 +        if (iter == states_.end()) break;
          FML_DCHECK(iter != states_.end());
          PointerState state = iter->second;
+
