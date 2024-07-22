@@ -6,6 +6,15 @@ import 'flutter_view_positioner.dart';
 
 const channel = MethodChannel('io.mir-server/window');
 
+enum FlutterViewArchetype {
+  regular,
+  floatingRegular,
+  dialog,
+  satellite,
+  popup,
+  tip,
+}
+
 Future<FlutterView> createRegularWindow(Size size) async {
   int clampToZeroInt(double value) => value < 0 ? 0 : value.toInt();
   final int width = clampToZeroInt(size.width);

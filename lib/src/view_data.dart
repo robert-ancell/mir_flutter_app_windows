@@ -1,15 +1,7 @@
 import 'dart:ui' show FlutterView;
 
 import 'package:flutter/widgets.dart';
-
-enum FlutterViewArchetype {
-  regular,
-  floatingRegular,
-  dialog,
-  satellite,
-  popup,
-  tip,
-}
+import 'api/windowing_api.dart';
 
 class ViewData {
   final FlutterView view;

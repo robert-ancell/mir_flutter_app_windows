@@ -77,17 +77,3 @@ class PopupWindow extends StatelessWidget {
     );
   }
 }
-
-
-/*
-    <String, dynamic>{
-      'name': 'Center',
-      'parentAnchor': FlutterViewPositionerAnchor.center,
-      'childAnchor': FlutterViewPositionerAnchor.center,
-      'offset': const Offset(0, 0),
-      'constraintAdjustments': <FlutterViewPositionerConstraintAdjustment>{
-        FlutterViewPositionerConstraintAdjustment.slideX,
-        FlutterViewPositionerConstraintAdjustment.slideY,
-      }
-    },
-*/

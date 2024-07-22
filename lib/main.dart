@@ -5,6 +5,7 @@ import 'src/view_data.dart';
 import 'src/app_model.dart';
 import 'src/widgets.dart';
 import 'src/inherited_views.dart';
+import 'src/api/windowing_api.dart';
 
 import 'src/main_window.dart';
 import 'src/regular_window.dart';

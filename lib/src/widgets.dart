@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 
 import 'inherited_views.dart';
 import 'view_data.dart';
+import 'api/windowing_api.dart';
 
 /// Calls [viewBuilder] for every view added to the app to obtain the widget to
 /// render into that view. The current view can be looked up with [View.of].
