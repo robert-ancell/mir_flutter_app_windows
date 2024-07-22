@@ -614,7 +614,7 @@ auto FlutterWindowManager::createRegularWindow(std::wstring const &title,
 
   initializeChannel();
   cleanupClosedWindows();
-  sendOnWindowCreated(mir::Archetype::regular, view_id, -1);
+  sendOnWindowCreated(mir::Archetype::regular, view_id, std::nullopt);
 
   lock.unlock();
   sendOnWindowResized(view_id);
@@ -705,7 +705,7 @@ auto FlutterWindowManager::channel() const
 
 void FlutterWindowManager::sendOnWindowCreated(
     mir::Archetype archetype, flutter::FlutterViewId view_id,
-    flutter::FlutterViewId parent_view_id) const {
+    std::optional<flutter::FlutterViewId> parent_view_id) const {
   if (channel_) {
     channel_->InvokeMethod(
         "onWindowCreated",
@@ -713,7 +713,7 @@ void FlutterWindowManager::sendOnWindowCreated(
             {flutter::EncodableValue("viewId"),
              flutter::EncodableValue(view_id)},
             {flutter::EncodableValue("parentViewId"),
-             flutter::EncodableValue(parent_view_id)},
+            parent_view_id ? flutter::EncodableValue(*parent_view_id) : flutter::EncodableValue()},
             {flutter::EncodableValue("archetype"),
              flutter::EncodableValue(static_cast<int>(archetype))}}));
   }

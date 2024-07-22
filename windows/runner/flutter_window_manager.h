@@ -53,7 +53,7 @@ private:
   void initializeChannel();
   void sendOnWindowCreated(mir::Archetype archetype,
                            flutter::FlutterViewId view_id,
-                           flutter::FlutterViewId parent_view_id) const;
+                           std::optional<flutter::FlutterViewId> parent_view_id) const;
   void sendOnWindowDestroyed(flutter::FlutterViewId view_id) const;
   void sendOnWindowResized(flutter::FlutterViewId view_id) const;
   void cleanupClosedWindows();
