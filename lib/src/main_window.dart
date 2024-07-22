@@ -138,7 +138,7 @@ class MainWindow extends StatelessWidget {
                                               icon: const Icon(
                                                   Icons.delete_outlined),
                                               onPressed: () {
-                                                destroyWindow(viewId);
+                                                destroyWindow(viewData.view);
                                               },
                                             ),
                                           ),
@@ -550,10 +550,6 @@ class MainWindow extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void destroyWindow(int windowId) {
-    channel.invokeMethod('destroyWindow', [windowId]);
   }
 
   Rect clampRectToSize(Rect anchorRect, Size? size) {

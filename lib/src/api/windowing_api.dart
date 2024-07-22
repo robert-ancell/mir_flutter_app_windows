@@ -52,3 +52,7 @@ Future<FlutterView> createPopupWindow(FlutterView parent, Size size,
     },
   );
 }
+
+void destroyWindow(FlutterView window) {
+  channel.invokeMethod('destroyWindow', [window.viewId]);
+}
