@@ -4,7 +4,7 @@
 #include <flutter/method_channel.h>
 
 #include "flutter_window.h"
-#include "mir_windowing_types.h"
+#include "windowing_types.h"
 
 #include <expected>
 #include <mutex>
@@ -51,7 +51,7 @@ private:
   FlutterWindowManager() = default;
 
   void initializeChannel();
-  void sendOnWindowCreated(mir::Archetype archetype,
+  void sendOnWindowCreated(flw::Archetype archetype,
                            flutter::FlutterViewId view_id,
                            std::optional<flutter::FlutterViewId> parent_view_id) const;
   void sendOnWindowDestroyed(flutter::FlutterViewId view_id) const;

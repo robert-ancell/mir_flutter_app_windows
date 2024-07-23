@@ -8,7 +8,7 @@
 #include <algorithm>
 
 namespace {
-auto *const CHANNEL{"io.mir-server/window"};
+auto *const CHANNEL{"flw/window"};
 auto const base_dpi{96.0};
 
 // Returns the origin point that will center a window of size 'size' within the
@@ -29,7 +29,7 @@ auto calculateCenteredOrigin(Win32Window::Size size,
 }
 
 std::tuple<Win32Window::Point, Win32Window::Size>
-applyPositioner(mir::Positioner const &positioner,
+applyPositioner(flw::Positioner const &positioner,
                 Win32Window::Size const &size,
                 flutter::FlutterViewId parent_view_id) {
   auto const &windows{FlutterWindowManager::instance().windows()};
@@ -74,23 +74,23 @@ applyPositioner(mir::Positioner const &positioner,
   PointF const child_center{child_size.x / 2.0, child_size.y / 2.0};
 
   auto const get_parent_anchor_point{
-      [&](mir::Positioner::Anchor anchor) -> PointF {
+      [&](flw::Positioner::Anchor anchor) -> PointF {
         switch (anchor) {
-        case mir::Positioner::Anchor::top:
+        case flw::Positioner::Anchor::top:
           return {center.x, cropped_frame.top};
-        case mir::Positioner::Anchor::bottom:
+        case flw::Positioner::Anchor::bottom:
           return {center.x, cropped_frame.bottom};
-        case mir::Positioner::Anchor::left:
+        case flw::Positioner::Anchor::left:
           return {cropped_frame.left, center.y};
-        case mir::Positioner::Anchor::right:
+        case flw::Positioner::Anchor::right:
           return {cropped_frame.right, center.y};
-        case mir::Positioner::Anchor::top_left:
+        case flw::Positioner::Anchor::top_left:
           return {cropped_frame.left, cropped_frame.top};
-        case mir::Positioner::Anchor::bottom_left:
+        case flw::Positioner::Anchor::bottom_left:
           return {cropped_frame.left, cropped_frame.bottom};
-        case mir::Positioner::Anchor::top_right:
+        case flw::Positioner::Anchor::top_right:
           return {cropped_frame.right, cropped_frame.top};
-        case mir::Positioner::Anchor::bottom_right:
+        case flw::Positioner::Anchor::bottom_right:
           return {cropped_frame.right, cropped_frame.bottom};
         default:
           return center;
@@ -98,23 +98,23 @@ applyPositioner(mir::Positioner const &positioner,
       }};
 
   auto const get_child_anchor_point{
-      [&](mir::Positioner::Gravity gravity) -> PointF {
+      [&](flw::Positioner::Gravity gravity) -> PointF {
         switch (gravity) {
-        case mir::Positioner::Gravity::top:
+        case flw::Positioner::Gravity::top:
           return {-child_center.x, -child_size.x};
-        case mir::Positioner::Gravity::bottom:
+        case flw::Positioner::Gravity::bottom:
           return {-child_center.x, 0};
-        case mir::Positioner::Gravity::left:
+        case flw::Positioner::Gravity::left:
           return {-child_size.x, -child_center.y};
-        case mir::Positioner::Gravity::right:
+        case flw::Positioner::Gravity::right:
           return {0, -child_center.y};
-        case mir::Positioner::Gravity::top_left:
+        case flw::Positioner::Gravity::top_left:
           return {-child_size.x, -child_size.y};
-        case mir::Positioner::Gravity::bottom_left:
+        case flw::Positioner::Gravity::bottom_left:
           return {-child_size.x, 0};
-        case mir::Positioner::Gravity::top_right:
+        case flw::Positioner::Gravity::top_right:
           return {0, -child_size.y};
-        case mir::Positioner::Gravity::bottom_right:
+        case flw::Positioner::Gravity::bottom_right:
           return {0, 0};
         default:
           return {-child_center.x, -child_center.y};
@@ -149,46 +149,46 @@ applyPositioner(mir::Positioner const &positioner,
 
   // X axis
   if (is_constrained_along_x()) {
-    auto const reverse_anchor_along_x{[](mir::Positioner::Anchor anchor) {
+    auto const reverse_anchor_along_x{[](flw::Positioner::Anchor anchor) {
       switch (anchor) {
-      case mir::Positioner::Anchor::left:
-        return mir::Positioner::Anchor::right;
-      case mir::Positioner::Anchor::right:
-        return mir::Positioner::Anchor::left;
-      case mir::Positioner::Anchor::top_left:
-        return mir::Positioner::Anchor::top_right;
-      case mir::Positioner::Anchor::bottom_left:
-        return mir::Positioner::Anchor::bottom_right;
-      case mir::Positioner::Anchor::top_right:
-        return mir::Positioner::Anchor::top_left;
-      case mir::Positioner::Anchor::bottom_right:
-        return mir::Positioner::Anchor::bottom_left;
+      case flw::Positioner::Anchor::left:
+        return flw::Positioner::Anchor::right;
+      case flw::Positioner::Anchor::right:
+        return flw::Positioner::Anchor::left;
+      case flw::Positioner::Anchor::top_left:
+        return flw::Positioner::Anchor::top_right;
+      case flw::Positioner::Anchor::bottom_left:
+        return flw::Positioner::Anchor::bottom_right;
+      case flw::Positioner::Anchor::top_right:
+        return flw::Positioner::Anchor::top_left;
+      case flw::Positioner::Anchor::bottom_right:
+        return flw::Positioner::Anchor::bottom_left;
       default:
         return anchor;
       }
     }};
 
-    auto const reverse_gravity_along_x{[](mir::Positioner::Gravity gravity) {
+    auto const reverse_gravity_along_x{[](flw::Positioner::Gravity gravity) {
       switch (gravity) {
-      case mir::Positioner::Gravity::left:
-        return mir::Positioner::Gravity::right;
-      case mir::Positioner::Gravity::right:
-        return mir::Positioner::Gravity::left;
-      case mir::Positioner::Gravity::top_left:
-        return mir::Positioner::Gravity::top_right;
-      case mir::Positioner::Gravity::bottom_left:
-        return mir::Positioner::Gravity::bottom_right;
-      case mir::Positioner::Gravity::top_right:
-        return mir::Positioner::Gravity::top_left;
-      case mir::Positioner::Gravity::bottom_right:
-        return mir::Positioner::Gravity::bottom_left;
+      case flw::Positioner::Gravity::left:
+        return flw::Positioner::Gravity::right;
+      case flw::Positioner::Gravity::right:
+        return flw::Positioner::Gravity::left;
+      case flw::Positioner::Gravity::top_left:
+        return flw::Positioner::Gravity::top_right;
+      case flw::Positioner::Gravity::bottom_left:
+        return flw::Positioner::Gravity::bottom_right;
+      case flw::Positioner::Gravity::top_right:
+        return flw::Positioner::Gravity::top_left;
+      case flw::Positioner::Gravity::bottom_right:
+        return flw::Positioner::Gravity::bottom_left;
       default:
         return gravity;
       }
     }};
 
     if (positioner.constraint_adjustment &
-        static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_x)) {
+        static_cast<uint32_t>(flw::Positioner::ConstraintAdjustment::flip_x)) {
       anchor = reverse_anchor_along_x(anchor);
       gravity = reverse_gravity_along_x(gravity);
       parent_anchor_point = get_parent_anchor_point(anchor);
@@ -201,7 +201,7 @@ applyPositioner(mir::Positioner const &positioner,
       }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
-                   mir::Positioner::ConstraintAdjustment::slide_x)) {
+                   flw::Positioner::ConstraintAdjustment::slide_x)) {
       // TODO: Slide towards the direction of the gravity first
       if (origin_dc.x < 0) {
         auto const diff{abs(origin_dc.x)};
@@ -217,7 +217,7 @@ applyPositioner(mir::Positioner const &positioner,
       }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
-                   mir::Positioner::ConstraintAdjustment::resize_x)) {
+                   flw::Positioner::ConstraintAdjustment::resize_x)) {
       if (origin_dc.x < 0) {
         auto const diff{std::clamp(abs(origin_dc.x), 1.0, child_size.x - 1)};
         origin_dc.x += diff;
@@ -234,46 +234,46 @@ applyPositioner(mir::Positioner const &positioner,
 
   // Y axis
   if (is_constrained_along_y()) {
-    auto const reverse_anchor_along_y{[](mir::Positioner::Anchor anchor) {
+    auto const reverse_anchor_along_y{[](flw::Positioner::Anchor anchor) {
       switch (anchor) {
-      case mir::Positioner::Anchor::top:
-        return mir::Positioner::Anchor::bottom;
-      case mir::Positioner::Anchor::bottom:
-        return mir::Positioner::Anchor::top;
-      case mir::Positioner::Anchor::top_left:
-        return mir::Positioner::Anchor::bottom_left;
-      case mir::Positioner::Anchor::bottom_left:
-        return mir::Positioner::Anchor::top_left;
-      case mir::Positioner::Anchor::top_right:
-        return mir::Positioner::Anchor::bottom_right;
-      case mir::Positioner::Anchor::bottom_right:
-        return mir::Positioner::Anchor::top_right;
+      case flw::Positioner::Anchor::top:
+        return flw::Positioner::Anchor::bottom;
+      case flw::Positioner::Anchor::bottom:
+        return flw::Positioner::Anchor::top;
+      case flw::Positioner::Anchor::top_left:
+        return flw::Positioner::Anchor::bottom_left;
+      case flw::Positioner::Anchor::bottom_left:
+        return flw::Positioner::Anchor::top_left;
+      case flw::Positioner::Anchor::top_right:
+        return flw::Positioner::Anchor::bottom_right;
+      case flw::Positioner::Anchor::bottom_right:
+        return flw::Positioner::Anchor::top_right;
       default:
         return anchor;
       }
     }};
 
-    auto const reverse_gravity_along_y{[](mir::Positioner::Gravity gravity) {
+    auto const reverse_gravity_along_y{[](flw::Positioner::Gravity gravity) {
       switch (gravity) {
-      case mir::Positioner::Gravity::top:
-        return mir::Positioner::Gravity::bottom;
-      case mir::Positioner::Gravity::bottom:
-        return mir::Positioner::Gravity::top;
-      case mir::Positioner::Gravity::top_left:
-        return mir::Positioner::Gravity::bottom_left;
-      case mir::Positioner::Gravity::bottom_left:
-        return mir::Positioner::Gravity::top_left;
-      case mir::Positioner::Gravity::top_right:
-        return mir::Positioner::Gravity::bottom_right;
-      case mir::Positioner::Gravity::bottom_right:
-        return mir::Positioner::Gravity::top_right;
+      case flw::Positioner::Gravity::top:
+        return flw::Positioner::Gravity::bottom;
+      case flw::Positioner::Gravity::bottom:
+        return flw::Positioner::Gravity::top;
+      case flw::Positioner::Gravity::top_left:
+        return flw::Positioner::Gravity::bottom_left;
+      case flw::Positioner::Gravity::bottom_left:
+        return flw::Positioner::Gravity::top_left;
+      case flw::Positioner::Gravity::top_right:
+        return flw::Positioner::Gravity::bottom_right;
+      case flw::Positioner::Gravity::bottom_right:
+        return flw::Positioner::Gravity::top_right;
       default:
         return gravity;
       }
     }};
 
     if (positioner.constraint_adjustment &
-        static_cast<uint32_t>(mir::Positioner::ConstraintAdjustment::flip_y)) {
+        static_cast<uint32_t>(flw::Positioner::ConstraintAdjustment::flip_y)) {
       anchor = reverse_anchor_along_y(anchor);
       gravity = reverse_gravity_along_y(gravity);
       parent_anchor_point = get_parent_anchor_point(anchor);
@@ -286,7 +286,7 @@ applyPositioner(mir::Positioner const &positioner,
       }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
-                   mir::Positioner::ConstraintAdjustment::slide_y)) {
+                   flw::Positioner::ConstraintAdjustment::slide_y)) {
       // TODO: Slide towards the direction of the gravity first
       if (origin_dc.y < 0) {
         auto const diff{abs(origin_dc.y)};
@@ -302,7 +302,7 @@ applyPositioner(mir::Positioner const &positioner,
       }
     } else if (positioner.constraint_adjustment &
                static_cast<uint32_t>(
-                   mir::Positioner::ConstraintAdjustment::resize_y)) {
+                   flw::Positioner::ConstraintAdjustment::resize_y)) {
       if (origin_dc.y < 0) {
         auto const diff{std::clamp(abs(origin_dc.y), 1.0, child_size.y - 1)};
         origin_dc.y += diff;
@@ -451,32 +451,32 @@ void handleCreatePopupWindow(flutter::MethodCall<> const &call,
         return;
       }
       // Convert from anchor (originally a FlutterViewPositionerAnchor) to
-      // mir::Positioner::Gravity
+      // flw::Positioner::Gravity
       auto const gravity{
-          [](mir::Positioner::Anchor anchor) -> mir::Positioner::Gravity {
+          [](flw::Positioner::Anchor anchor) -> flw::Positioner::Gravity {
             switch (anchor) {
-            case mir::Positioner::Anchor::none:
-              return mir::Positioner::Gravity::none;
-            case mir::Positioner::Anchor::top:
-              return mir::Positioner::Gravity::bottom;
-            case mir::Positioner::Anchor::bottom:
-              return mir::Positioner::Gravity::top;
-            case mir::Positioner::Anchor::left:
-              return mir::Positioner::Gravity::right;
-            case mir::Positioner::Anchor::right:
-              return mir::Positioner::Gravity::left;
-            case mir::Positioner::Anchor::top_left:
-              return mir::Positioner::Gravity::bottom_right;
-            case mir::Positioner::Anchor::bottom_left:
-              return mir::Positioner::Gravity::top_right;
-            case mir::Positioner::Anchor::top_right:
-              return mir::Positioner::Gravity::bottom_left;
-            case mir::Positioner::Anchor::bottom_right:
-              return mir::Positioner::Gravity::top_left;
+            case flw::Positioner::Anchor::none:
+              return flw::Positioner::Gravity::none;
+            case flw::Positioner::Anchor::top:
+              return flw::Positioner::Gravity::bottom;
+            case flw::Positioner::Anchor::bottom:
+              return flw::Positioner::Gravity::top;
+            case flw::Positioner::Anchor::left:
+              return flw::Positioner::Gravity::right;
+            case flw::Positioner::Anchor::right:
+              return flw::Positioner::Gravity::left;
+            case flw::Positioner::Anchor::top_left:
+              return flw::Positioner::Gravity::bottom_right;
+            case flw::Positioner::Anchor::bottom_left:
+              return flw::Positioner::Gravity::top_right;
+            case flw::Positioner::Anchor::top_right:
+              return flw::Positioner::Gravity::bottom_left;
+            case flw::Positioner::Anchor::bottom_right:
+              return flw::Positioner::Gravity::top_left;
             default:
-              return mir::Positioner::Gravity::none;
+              return flw::Positioner::Gravity::none;
             }
-          }(static_cast<mir::Positioner::Anchor>(*positioner_child_anchor))};
+          }(static_cast<flw::Positioner::Anchor>(*positioner_child_anchor))};
 
       // positionerOffset
       auto const *const positioner_offset_list{
@@ -502,13 +502,13 @@ void handleCreatePopupWindow(flutter::MethodCall<> const &call,
         return;
       }
 
-      mir::Positioner const positioner{
+      flw::Positioner const positioner{
           .anchor_rect = {.x = anchor_rect_x,
                           .y = anchor_rect_y,
                           .width = anchor_rect_width,
                           .height = anchor_rect_height},
           .anchor =
-              static_cast<mir::Positioner::Anchor>(*positioner_parent_anchor),
+              static_cast<flw::Positioner::Anchor>(*positioner_parent_anchor),
           .gravity = gravity,
           .offset = {.dx = dx, .dy = dy},
           .constraint_adjustment =
@@ -599,7 +599,7 @@ auto FlutterWindowManager::createRegularWindow(std::wstring const &title,
   auto window{std::make_unique<FlutterWindow>(engine_)};
 
   lock.unlock();
-  if (!window->Create(title, origin, size, mir::Archetype::regular, nullptr)) {
+  if (!window->Create(title, origin, size, flw::Archetype::regular, nullptr)) {
     return std::unexpected(Error::Win32Error);
   }
   lock.lock();
@@ -614,7 +614,7 @@ auto FlutterWindowManager::createRegularWindow(std::wstring const &title,
 
   initializeChannel();
   cleanupClosedWindows();
-  sendOnWindowCreated(mir::Archetype::regular, view_id, std::nullopt);
+  sendOnWindowCreated(flw::Archetype::regular, view_id, std::nullopt);
 
   lock.unlock();
   sendOnWindowResized(view_id);
@@ -641,7 +641,7 @@ auto FlutterWindowManager::createPopupWindow(
   auto window{std::make_unique<FlutterWindow>(engine_)};
 
   lock.unlock();
-  if (!window->Create(title, origin, size, mir::Archetype::popup,
+  if (!window->Create(title, origin, size, flw::Archetype::popup,
                       parent_hwnd)) {
     return std::unexpected(Error::Win32Error);
   }
@@ -652,7 +652,7 @@ auto FlutterWindowManager::createPopupWindow(
 
   initializeChannel();
   cleanupClosedWindows();
-  sendOnWindowCreated(mir::Archetype::popup, view_id,
+  sendOnWindowCreated(flw::Archetype::popup, view_id,
                       parent_view_id ? *parent_view_id : -1);
 
   lock.unlock();
@@ -704,7 +704,7 @@ auto FlutterWindowManager::channel() const
 };
 
 void FlutterWindowManager::sendOnWindowCreated(
-    mir::Archetype archetype, flutter::FlutterViewId view_id,
+    flw::Archetype archetype, flutter::FlutterViewId view_id,
     std::optional<flutter::FlutterViewId> parent_view_id) const {
   if (channel_) {
     channel_->InvokeMethod(

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'flutter_view_positioner.dart';
 
-const channel = MethodChannel('io.mir-server/window');
+const channel = MethodChannel('flw/window');
 
 enum FlutterViewArchetype {
   regular,

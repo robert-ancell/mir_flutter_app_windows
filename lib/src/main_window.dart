@@ -21,7 +21,7 @@ class MainWindow extends StatelessWidget {
       appBar: AppBar(
         title: Consumer<AppModel>(
           builder: (context, dataProvider, child) {
-            return Text('Mir Window Test ${dataProvider.selectedRowIndex}');
+            return const Text('Multi Window Test');
           },
         ),
       ),

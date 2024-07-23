@@ -3,7 +3,7 @@
 
 #include <windows.h>
 
-#include "mir_windowing_types.h"
+#include "windowing_types.h"
 
 #include <set>
 #include <string>
@@ -36,7 +36,7 @@ public:
   // as appropriate for the default monitor. The window is invisible until
   // |Show| is called. Returns true if the window was created successfully.
   bool Create(const std::wstring &title, const Point &origin, const Size &size,
-              mir::Archetype archetype, HWND parent);
+              flw::Archetype archetype, HWND parent);
 
   // Release OS resources associated with window.
   void Destroy();
@@ -69,7 +69,7 @@ protected:
   // Called when Destroy is called.
   virtual void OnDestroy();
 
-  mir::Archetype archetype_{mir::Archetype::regular};
+  flw::Archetype archetype_{flw::Archetype::regular};
   std::set<Win32Window *> child_popups_;
 
 private:

@@ -1,11 +1,9 @@
 #include "win32_window.h"
 
 #include <dwmapi.h>
-#include <flutter_windows.h>
 
 #include "flutter_window_manager.h"
 
-#include "debug.h"
 #include "resource.h"
 
 namespace {
@@ -187,7 +185,7 @@ Win32Window::~Win32Window() {
 }
 
 bool Win32Window::Create(const std::wstring &title, const Point &origin,
-                         const Size &size, mir::Archetype archetype,
+                         const Size &size, flw::Archetype archetype,
                          HWND parent) {
   Destroy();
 
@@ -206,10 +204,10 @@ bool Win32Window::Create(const std::wstring &title, const Point &origin,
   DWORD window_style{WS_VISIBLE};
 
   switch (archetype) {
-  case mir::Archetype::regular:
+  case flw::Archetype::regular:
     window_style |= WS_OVERLAPPEDWINDOW;
     break;
-  case mir::Archetype::popup:
+  case flw::Archetype::popup:
     if (auto *const parent_window{GetThisFromHandle(parent)}) {
       if (parent_window->child_content_ != nullptr) {
         SetFocus(parent_window->child_content_);
@@ -291,7 +289,7 @@ Win32Window::MessageHandler(HWND hwnd, UINT message, WPARAM wparam,
 
   case WM_ACTIVATE:
     if (wparam != WA_INACTIVE) {
-      if (archetype_ != mir::Archetype::popup) {
+      if (archetype_ != flw::Archetype::popup) {
         // If this window is not a popup and is being activated, close the
         // popups anchored to other windows
         for (auto const &[_, window] : FlutterWindowManager::instance().windows()) {
@@ -308,7 +306,7 @@ Win32Window::MessageHandler(HWND hwnd, UINT message, WPARAM wparam,
     return 0;
 
   case WM_NCACTIVATE:
-    if (wparam == FALSE && archetype_ != mir::Archetype::popup &&
+    if (wparam == FALSE && archetype_ != flw::Archetype::popup &&
         !child_popups_.empty()) {
       // If an inactive title bar is to be drawn, and this is a top-level window
       // with popups, force the title bar to be drawn in its active colors
@@ -399,7 +397,7 @@ bool Win32Window::OnCreate() {
 }
 
 void Win32Window::OnDestroy() {
-  if (archetype_ == mir::Archetype::popup) {
+  if (archetype_ == flw::Archetype::popup) {
     if (auto *const parent_window{GetParent(window_handle_)}) {
       GetThisFromHandle(parent_window)->child_popups_.erase(this);
     }

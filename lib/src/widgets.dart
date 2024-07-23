@@ -26,7 +26,7 @@ class MultiViewApp extends StatefulWidget {
 
 class _MultiViewAppState extends State<MultiViewApp>
     with WidgetsBindingObserver {
-  static const channel = MethodChannel('io.mir-server/window');
+  static const channel = MethodChannel('flw/window');
 
   Map<int, ViewData> _views = <int, ViewData>{};
 

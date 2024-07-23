@@ -1,9 +1,9 @@
-#ifndef MIR_WINDOWING_TYPES_H_
-#define MIR_WINDOWING_TYPES_H_
+#ifndef WINDOWING_TYPES_H_
+#define WINDOWING_TYPES_H_
 
 #include <cstdint>
 
-namespace mir {
+namespace flw {
 
 enum class Archetype {
   regular,
@@ -73,6 +73,6 @@ struct Positioner {
   uint32_t constraint_adjustment;
 };
 
-} // namespace mir
+} // namespace flw
 
-#endif // MIR_WINDOWING_TYPES_H_
+#endif // WINDOWING_TYPES_H_
